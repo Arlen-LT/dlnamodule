@@ -9,11 +9,15 @@
 #include <filesystem>
 
 #include "upnp.h"
-//#include "slog.h"
 
+#if ENABLE_SLOG
+#include "contrib/slog/slog.h"
 #define Log(x, y, ...) do {                                 \
-         \
+    slog_tag("DLNAModule", 3 - x, y"\n", ##__VA_ARGS__);     \
 } while (0)
+#else
+#define Log(x, y, ...) do {} while (0)
+#endif
 
 typedef void(*BrowseDLNAFolderCallback)(const char* folderxml, int xmlLength, const char* uuid, int uuidLength, const char* objid, int objidLength);
 typedef void(*AddDLNADeviceCallback)(const char* uuid, int uuidLength, const char* title, int titleLength, const char* iconurl, int iconLength, const char* manufacturer, int manufacturerLength);
