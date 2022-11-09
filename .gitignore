@@ -1,4 +1,10 @@
-# Build cache
+# Build Artifacts
+out
+armv7
+arm64
+amd64
+
+# Build Cache
 .vs
 
 # Prerequisites
