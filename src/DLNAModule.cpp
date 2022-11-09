@@ -1,6 +1,7 @@
 #include "DLNAModule.h"
 #include "ixml.h"
 #include "upnptools.h"
+#include "config.h"
 #include <future>
 #include <fstream>
 #include <regex>

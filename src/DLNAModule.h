@@ -9,10 +9,10 @@
 #include <filesystem>
 
 #include "upnp.h"
-#include "slog.h"
+//#include "slog.h"
 
 #define Log(x, y, ...) do {                                 \
-    slog_tag("DLNAModule", 3 - x, y"\n", ##__VA_ARGS__);     \
+         \
 } while (0)
 
 typedef void(*BrowseDLNAFolderCallback)(const char* folderxml, int xmlLength, const char* uuid, int uuidLength, const char* objid, int objidLength);
