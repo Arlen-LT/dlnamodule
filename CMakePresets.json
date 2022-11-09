@@ -9,8 +9,8 @@
         {
             "name": "armv7",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/${presetName}/build",
-            "installDir": "${sourceDir}/${presetName}/install",
+            "binaryDir": "${sourceDir}/out/${presetName}/build",
+            "installDir": "${sourceDir}/out/${presetName}/install",
             "cacheVariables": {
                 "CMAKE_SYSTEM_NAME": "Android",
                 "CMAKE_SYSTEM_VERSION": "27",
