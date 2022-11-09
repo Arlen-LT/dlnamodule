@@ -33,7 +33,10 @@ target_sources(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PRIVATE
     "src"
 )
-target_link_libraries(${PROJECT_NAME} UPNP::Static IXML::Static $<IF:${ENABLE_SLOG},slog>)
+
+set(ENABLE_SLOG OFF CACHE BOOL "link libslog shared library")
+target_link_directories(${PROJECT_NAME} PRIVATE $<$<BOOL:${ENABLE_SLOG}>:${CMAKE_CURRENT_SOURCE_DIR}/contrib/slog>)
+target_link_libraries(${PROJECT_NAME} UPNP::Static IXML::Static $<$<BOOL:${ENABLE_SLOG}>:slog>)
 
 install (TARGETS DLNAModule
     EXPORT DLNAModule
