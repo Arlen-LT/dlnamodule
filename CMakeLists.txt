@@ -1,13 +1,20 @@
 cmake_minimum_required(VERSION 3.23)
 
+string(TIMESTAMP BUILD_TIMESTAMP "%Y-%m-%d %H:%M:%S")
+include(cmake/GetGitRevisionDescription.cmake)
+get_git_head_revision(GIT_REFSPEC GIT_HASH)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-#include(GetGitRevisionDescription)
-#get_git_head_revision(GIT_REFSPEC GIT_HASH)
+project(DLNAModule VERSION 0.1.0)
 
-project(DLNAModule VERSION 0.1)
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DLNAConfig.h.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/DLNAConfig.h"
+    @ONLY
+)
 
 #set(CMAKE_CXX_EXTENSIONS OFF)
 #set(CLANG_DEFAULT_CXX_STDLIB "libc++")

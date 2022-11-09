@@ -4,8 +4,12 @@ armv7
 arm64
 amd64
 
+# Auto Generated Files
+src/DLNAConfig.h
+
 # Build Cache
 .vs
+.vscode
 
 # Prerequisites
 *.d

@@ -1,4 +1,5 @@
 #include "DLNAModule.h"
+#include "DLNAConfig.h"
 #include "ixml.h"
 #include "upnptools.h"
 #include "config.h"
@@ -29,6 +30,7 @@ DLNAModule& DLNAModule::GetInstance()
 
 void DLNAModule::StartupModule()
 {
+    Log(LEVEL_INFO,"Starting DLNAModule-%d.%d.%d-%s, built at %s", DLNA_VERSION_MAJOR, DLNA_VERSION_MINOR, DLNA_VERSION_PATCH,DLNA_VERSION_COMMIT,BUILD_TIMESTAMP);
     StartDiscover();
     std::thread(&DLNAModule::TaskThread, &GetInstance()).detach();
 }
