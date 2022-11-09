@@ -7,7 +7,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 #include(GetGitRevisionDescription)
 #get_git_head_revision(GIT_REFSPEC GIT_HASH)
 
-project(DLNA VERSION 0.1)
+project(DLNAModule VERSION 0.1)
 
 #set(CMAKE_CXX_EXTENSIONS OFF)
 #set(CLANG_DEFAULT_CXX_STDLIB "libc++")
@@ -28,8 +28,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 target_link_libraries(${PROJECT_NAME} UPNP::Static IXML::Static)
 
-install (TARGETS DLNA
-    EXPORT DLNA
+install (TARGETS DLNAModule
+    EXPORT DLNAModule
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         COMPONENT DLNA_Development
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/DLNA
