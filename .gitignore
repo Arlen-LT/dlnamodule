@@ -1,3 +1,6 @@
+# Build cache
+.vs
+
 # Prerequisites
 *.d
 
