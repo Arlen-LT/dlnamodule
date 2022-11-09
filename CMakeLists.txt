@@ -24,9 +24,7 @@ add_subdirectory("contrib/pupnp")
 
 target_sources(${PROJECT_NAME} 
     PRIVATE
-    "src/DLNAModule.cpp"
-
-    INTERFACE 
+    "src/DLNAModule.cpp" 
     "src/DLNAInterface.cpp"
 )
 
@@ -35,6 +33,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 set(ENABLE_SLOG OFF CACHE BOOL "link libslog shared library")
+if(${ENABLE_SLOG})
+    ADD_DEFINITIONS(-DENABLE_SLOG)
+endif()
 target_link_directories(${PROJECT_NAME} PRIVATE $<$<BOOL:${ENABLE_SLOG}>:${CMAKE_CURRENT_SOURCE_DIR}/contrib/slog>)
 target_link_libraries(${PROJECT_NAME} UPNP::Static IXML::Static $<$<BOOL:${ENABLE_SLOG}>:slog>)
 
