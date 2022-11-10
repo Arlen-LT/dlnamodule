@@ -11,12 +11,6 @@
 #include <sys/resource.h>
 #endif
 
-#if _WIN64
-#define gettid() GetCurrentThreadId()
-#include <format>
-#include "asprintf.h"
-#endif
-
 using namespace std::chrono_literals;
 
 const char* MEDIA_SERVER_DEVICE_TYPE = "urn:schemas-upnp-org:device:MediaServer:1";
@@ -30,7 +24,7 @@ DLNAModule& DLNAModule::GetInstance()
 
 void DLNAModule::StartupModule()
 {
-    Log(LEVEL_INFO,"Starting DLNAModule-%d.%d.%d-%s, built at %s", DLNA_VERSION_MAJOR, DLNA_VERSION_MINOR, DLNA_VERSION_PATCH,DLNA_VERSION_COMMIT,BUILD_TIMESTAMP);
+    Log(LEVEL_INFO, "Starting DLNAModule-%d.%d.%d-%s, built at %s", DLNA_VERSION_MAJOR, DLNA_VERSION_MINOR, DLNA_VERSION_PATCH, DLNA_VERSION_COMMIT, BUILD_TIMESTAMP);
     StartDiscover();
     std::thread(&DLNAModule::TaskThread, &GetInstance()).detach();
 }
@@ -237,15 +231,15 @@ void DLNAModule::TaskThread()
             {
 #if __cplusplus >= 202002L
                 return !isDLNAModuleRunning
-                    || !discoverAtomicFlag.test()
-                    || currentBrowseFolderTask;
+                || !discoverAtomicFlag.test()
+                || currentBrowseFolderTask;
 #else
                 bool flag = discoverAtomicFlag.test_and_set(std::memory_order_acquire);
-                if (flag == false)
-                    discoverAtomicFlag.clear(std::memory_order_release);
-                return !isDLNAModuleRunning
-                    || !flag
-                    || currentBrowseFolderTask;
+            if (flag == false)
+                discoverAtomicFlag.clear(std::memory_order_release);
+            return !isDLNAModuleRunning
+                || !flag
+                || currentBrowseFolderTask;
 #endif
             });
     }
@@ -534,14 +528,9 @@ std::string DLNAModule::GetIconURL(IXML_Element* device, const char* baseURL)
 
     if (!res.empty())
     {
-        char* urlTemp;
-        if (asprintf(&urlTemp, "%s://%s:%u%s", url.protocol, url.host, url.port, res.c_str()) < 0)
-            res.clear();
-        else
-        {
-            res = urlTemp;
-            free(urlTemp);
-        }
+        std::ostringstream oss;
+        oss << url.protocol <<"://" << url.host <<":" << url.port << res;
+        res = oss.str();
     }
 
 end:

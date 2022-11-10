@@ -16,6 +16,10 @@ configure_file(
     @ONLY
 )
 
+if(MSVC)
+    add_definitions(-D_WINDLL -D_UNICODE -DUNICODE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8 /Zc:__cplusplus")
+endif()
 #set(CMAKE_CXX_EXTENSIONS OFF)
 #set(CLANG_DEFAULT_CXX_STDLIB "libc++")
 

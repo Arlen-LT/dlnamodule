@@ -7,6 +7,27 @@
     },
     "configurePresets": [
         {
+            "name": "win64",
+            "description": "Target Windows with the Visual Studio development environment.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/${presetName}/build/",
+            "installDir": "${sourceDir}/${presetName}/install",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "cl.exe",
+                "CMAKE_CXX_COMPILER": "cl.exe"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
             "name": "armv7",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/${presetName}/build",
@@ -18,6 +39,11 @@
                 "CMAKE_ANDROID_NDK": "$env{ANDROID_NDK}",
                 "CMAKE_SYSROOT": "$env{ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
                 "CMAKE_ANDROID_STL_TYPE": "c++_static"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
             }
         }
     ]
