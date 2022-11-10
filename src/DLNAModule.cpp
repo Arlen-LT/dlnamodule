@@ -5,6 +5,7 @@
 #include "config.h"
 #include <future>
 #include <fstream>
+#include <sstream>
 #include <regex>
 
 #if __ANDROID__
