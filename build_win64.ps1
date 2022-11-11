@@ -3,7 +3,7 @@ $vs2022_install=$(& "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs
 echo "Visual Studio Version: $vs2022_version"
 echo "Visual Studio Install Path: $vs2022_install"
 
-$cmake="$WINRUNNER_CMAKE_DIR/bin/cmake.exe"
+# $cmake="$WINRUNNER_CMAKE_DIR/bin/cmake.exe"
 & $cmake --version
 # $ninja="C:\tools\cmake-3.24.3-windows-x86_64\bin\ninja.exe"
 # & $ninja --version
