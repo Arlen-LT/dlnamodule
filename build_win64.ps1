@@ -8,3 +8,7 @@ $cmake="C:\tools\cmake-3.24.3-windows-x86_64\bin\cmake.exe"
 $ninja="C:\tools\cmake-3.24.3-windows-x86_64\bin\ninja.exe"
 & $ninja --version
 & $cmake --preset win64 -G"Visual Studio 17 2022"
+pushd win64/build
+& $cmake --build .
+& $cmake --install .
+popd
