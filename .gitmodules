@@ -1,4 +1,4 @@
 [submodule "contrib/pupnp"]
 	path = contrib/pupnp
-	url = git@gitlab.sourcetech.local:skybox/pupnp.git
+	url = http://gitlab.sourcetech.local/skybox/pupnp.git
 	branch = master
