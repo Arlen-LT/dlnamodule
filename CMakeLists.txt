@@ -16,34 +16,30 @@ configure_file(
     @ONLY
 )
 
+set(ENABLE_SLOG OFF CACHE BOOL "link libslog shared library")
 add_library(${PROJECT_NAME} SHARED)
 add_subdirectory("contrib/pupnp")
 
 target_sources(${PROJECT_NAME} 
     PRIVATE
-    "src/DLNAConfig.h"
-    "src/DLNAModule.h"
     "src/DLNAModule.cpp" 
     "src/DLNAInterface.cpp"
-    "src/logger.h" 
-    "src/logger.cpp")
+    "$<$<NOT:$<BOOL:${ENABLE_SLOG}>>:src/logger.cpp>"
+)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     "src"
 )
 
-set(ENABLE_SLOG OFF CACHE BOOL "link libslog shared library")
-if(${ENABLE_SLOG})
-    ADD_DEFINITIONS(-DENABLE_SLOG)
-endif()
-
 target_compile_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/utf-8 /Zc:__cplusplus>)
 target_compile_definitions(${PROJECT_NAME} 
     PUBLIC $<IF:$<CONFIG:Debug>,DEBUG,NDEBUG>
-    PUBLIC $<$<BOOL:${MSVC}>:_WINDLL _UNICODE UNICODE _CONSOLE>)
+    PUBLIC $<$<BOOL:${MSVC}>:_WINDLL _UNICODE UNICODE _CONSOLE>
+    PUBLIC $<$<BOOL:${ENABLE_SLOG}>:ENABLE_SLOG>
+)
 target_link_directories(${PROJECT_NAME} PRIVATE $<$<BOOL:${ENABLE_SLOG}>:${CMAKE_CURRENT_SOURCE_DIR}/contrib/slog>)
 target_link_libraries(${PROJECT_NAME} UPNP::Static IXML::Static $<$<BOOL:${ENABLE_SLOG}>:slog>)
-#target_link_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/DEBUG>)
+target_link_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/DEBUG>)
 
 install (TARGETS DLNAModule
     EXPORT DLNAModule

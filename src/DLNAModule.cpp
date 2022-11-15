@@ -171,7 +171,6 @@ void DLNAModule::TaskThread()
 	std::unique_lock<std::mutex> taskThreadLock(taskMutex);
 	while (isDLNAModuleRunning)
 	{
-		Log(LEVEL_INFO, "unlock");
 		if (!discoverAtomicFlag.test_and_set(std::memory_order_acquire))
 		{
 			{
@@ -341,11 +340,9 @@ browseActionCleanup:
 
 void DLNAModule::BrowseDLNAFolderByUnity(const char* uuid, int uuidLength, const char* objid, int objidLength)
 {
-	Log(LEVEL_INFO, "BrowseDLNAFolderByUnity: %s, objid: %s", uuid, objid);
 	currentTaskMutex.lock();
 	if (currentBrowseFolderTask)
 	{
-		Log(LEVEL_INFO, "delete currentBrowseFolderTask: %s, objid: %s", currentBrowseFolderTask->uuid, currentBrowseFolderTask->objid);
 		delete currentBrowseFolderTask;
 	}
 	currentBrowseFolderTask = new BrowseDLNAFolderInfo(uuid, uuidLength, objid, objidLength, nullptr, 0);
@@ -353,16 +350,6 @@ void DLNAModule::BrowseDLNAFolderByUnity(const char* uuid, int uuidLength, const
 
 	cvTaskThread.notify_all();
 }
-
-//void DLNAModule::AddServer(const std::string& udn, const std::string& friendlyName, const std::string& location, const std::string& iconUrl, const std::string& manufacturer)
-//{
-//    if (UpnpDeviceMap.find(udn) != UpnpDeviceMap.end())
-//        return;
-//
-//    UpnpDeviceMap.emplace(std::piecewise_construct, std::forward_as_tuple(udn), std::forward_as_tuple(udn, friendlyName, location, iconUrl, manufacturer));
-//    std::lock_guard<std::mutex> deviceQueueLock(deviceQueueMutex);
-//    queueAddDeviceInfo.emplace(std::make_shared<UpnpDevice>(udn, friendlyName, location, iconUrl, manufacturer));
-//}
 
 void DLNAModule::RemoveServer(const char* udn)
 {

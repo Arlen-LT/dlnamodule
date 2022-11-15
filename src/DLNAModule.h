@@ -181,7 +181,6 @@ private:
     void StopDiscover();
     void TaskThread();
 
-    void AddServer(const std::string& udn, const std::string& friendlyName, const std::string& location, const std::string& iconUrl, const std::string& manufacturer);
     void RemoveServer(const char* udn);
     void ParseNewServer(IXML_Document* doc, const char* location);
     std::string BrowseAction(const char* objectID, const char* flag, const char* filter, const char* startingIndex, const char* requestCount, const char* sortCriteria, const char* controlUrl);
