@@ -28,9 +28,12 @@ add_subdirectory("contrib/pupnp")
 
 target_sources(${PROJECT_NAME} 
     PRIVATE
+    "src/DLNAConfig.h"
+    "src/DLNAModule.h"
     "src/DLNAModule.cpp" 
     "src/DLNAInterface.cpp"
-)
+    "src/logger.h" 
+    "src/logger.cpp")
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     "src"

@@ -3,6 +3,7 @@ out
 armv7
 arm64
 amd64
+win64
 
 # Auto Generated Files
 src/DLNAConfig.h

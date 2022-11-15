@@ -10,7 +10,7 @@ $cmake="$cmake_install/bin/cmake.exe"
 & $cmake --version
 # $ninja="C:\tools\cmake-3.24.3-windows-x86_64\bin\ninja.exe"
 # & $ninja --version
-& $cmake --preset win64 -DENABLE_SLOG=TRUE -G"Visual Studio 17 2022"
+& $cmake --preset win64
 pushd win64/build
 & $cmake --build .
 & $cmake --install .

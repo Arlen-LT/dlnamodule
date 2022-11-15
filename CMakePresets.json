@@ -1,5 +1,5 @@
 {
-    "version": 5,
+    "version": 4,
     "cmakeMinimumRequired": {
         "major": 3,
         "minor": 24,
@@ -9,12 +9,12 @@
         {
             "name": "win64",
             "description": "Target Windows with the Visual Studio development environment.",
-            "generator": "Ninja",
+            "generator": "Visual Studio 17 2022",
             "binaryDir": "${sourceDir}/${presetName}/build/",
             "installDir": "${sourceDir}/${presetName}/install",
             "architecture": {
                 "value": "x64",
-                "strategy": "external"
+                "strategy": "set"
             },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
