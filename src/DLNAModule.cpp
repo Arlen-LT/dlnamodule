@@ -173,10 +173,6 @@ void DLNAModule::TaskThread()
 	{
 		if (!discoverAtomicFlag.test_and_set(std::memory_order_acquire))
 		{
-			{
-				std::scoped_lock<std::mutex> lock(UpnpDeviceMapMutex);
-				UpnpDeviceMap.clear();
-			}
 			UpnpSearchAsync(handle, MAX_SEARCH_TIME, "ssdp:all", &GetInstance());
 		}
 
