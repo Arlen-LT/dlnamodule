@@ -31,7 +31,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "src"
 )
 
-target_compile_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/utf-8 /Zc:__cplusplus>)
+target_compile_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/MP /utf-8 /Zc:__cplusplus $<$<CONFIG:Release>:/Zi> $<$<CONFIG:Debug>:/ZI>>)
 target_compile_definitions(${PROJECT_NAME} 
     PUBLIC $<IF:$<CONFIG:Debug>,DEBUG,NDEBUG>
     PUBLIC $<$<BOOL:${MSVC}>:_WINDLL _UNICODE UNICODE _CONSOLE>
