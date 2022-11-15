@@ -12,6 +12,6 @@ $cmake="$cmake_install/bin/cmake.exe"
 # & $ninja --version
 & $cmake --preset win64 -DBUILD_TESTING=FALSE
 pushd win64/build
-& $cmake --build .
+& $cmake --build . --config Release
 & $cmake --install .
 popd
