@@ -10,7 +10,7 @@ $cmake="$cmake_install/bin/cmake.exe"
 & $cmake --version
 # $ninja="C:\tools\cmake-3.24.3-windows-x86_64\bin\ninja.exe"
 # & $ninja --version
-& $cmake --preset win64
+& $cmake --preset win64 -DBUILD_TESTING=FALSE
 pushd win64/build
 & $cmake --build .
 & $cmake --install .
