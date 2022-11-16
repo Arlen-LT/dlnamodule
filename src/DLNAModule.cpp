@@ -28,7 +28,7 @@ DLNAModule& DLNAModule::GetInstance()
 
 void DLNAModule::StartupModule()
 {
-	Log(LEVEL_INFO, "Starting DLNAModule-%s-%.8s, built at %s", DLNA_VERSION_BRANCH, DLNA_VERSION_COMMIT, BUILD_TIMESTAMP);
+	Log(LEVEL_INFO, "Starting DLNAModule-%s-%.8s, built at %s", DLNA_VERSION_REF, DLNA_VERSION_COMMIT, BUILD_TIMESTAMP);
 	StartDiscover();
 	std::thread(&DLNAModule::TaskThread, &GetInstance()).detach();
 }
