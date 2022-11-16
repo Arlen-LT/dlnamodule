@@ -5,6 +5,7 @@ include(cmake/GetGitRevisionDescription.cmake)
 get_git_head_revision(GIT_REFSPEC GIT_HASH)
 git_describe_working_tree(GIT_TAG --match "v*")
 git_get_current_branch(GIT_BRANCH)
+message(STATUS "BUILDING DLNAModule-${GIT_BRANCH}-${GIT_TAG}-${GIT_HASH}")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
