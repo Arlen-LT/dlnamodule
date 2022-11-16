@@ -2,8 +2,15 @@ cmake_minimum_required(VERSION 3.23)
 
 string(TIMESTAMP BUILD_TIMESTAMP "%Y-%m-%d %H:%M:%S")
 include(cmake/GetGitRevisionDescription.cmake)
-get_git_head_revision(GIT_REFSPEC GIT_HASH)
-git_describe_working_tree(GIT_TAG --match "v*")
+
+if($ENV{CI_COMMIT_REF_NAME} and $ENV{CI_COMMIT_SHA})
+    set(GIT_REFSPEC $ENV{CI_COMMIT_REF_NAME})
+    set(GIT_HASH $ENV{CI_COMMIT_SHA})
+    set(GIT_TAG $ENV{CI_COMMIT_TAG})
+else()
+    get_git_head_revision(GIT_REFSPEC GIT_HASH)
+    git_describe_working_tree(GIT_TAG --match "v*")
+endif()
 message(STATUS "BUILDING DLNAModule-${GIT_REFSPEC}-${GIT_HASH} ${GIT_TAG}")
 
 set(CMAKE_CXX_STANDARD 20)
