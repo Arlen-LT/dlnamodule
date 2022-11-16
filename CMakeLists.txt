@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.23)
 string(TIMESTAMP BUILD_TIMESTAMP "%Y-%m-%d %H:%M:%S")
 include(cmake/GetGitRevisionDescription.cmake)
 
-if($ENV{CI_COMMIT_REF_NAME} and $ENV{CI_COMMIT_SHA})
+if($ENV{CI})
     set(GIT_REFSPEC $ENV{CI_COMMIT_REF_NAME})
     set(GIT_HASH $ENV{CI_COMMIT_SHA})
     set(GIT_TAG $ENV{CI_COMMIT_TAG})
