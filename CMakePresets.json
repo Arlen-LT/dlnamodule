@@ -33,6 +33,7 @@
             "binaryDir": "${sourceDir}/${presetName}/build",
             "installDir": "${sourceDir}/${presetName}/install",
             "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_SYSTEM_NAME": "Android",
                 "CMAKE_SYSTEM_VERSION": "27",
                 "CMAKE_ANDROID_ARCH_ABI": "armeabi-v7a",
