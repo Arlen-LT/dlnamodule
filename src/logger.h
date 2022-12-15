@@ -15,8 +15,7 @@
 #endif
 
 #if _WIN64
-#include <windows.h>
-#define gettid() GetCurrentThreadId()
+#define gettid() std::this_thread::get_id()
 #elif __ANDROID__
 #include <android/log.h>
 #include <unistd.h>
