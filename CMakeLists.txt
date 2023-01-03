@@ -40,7 +40,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "src"
 )
 
-target_compile_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/MP /utf-8 /Zc:__cplusplus $<$<CONFIG:Release>:/Zi> $<$<CONFIG:Debug>:/ZI>>)
+target_compile_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/MP /utf-8 /Zc:__cplusplus>)
 target_compile_definitions(${PROJECT_NAME} 
     PUBLIC $<IF:$<CONFIG:Debug>,DEBUG,NDEBUG>
     PUBLIC $<$<BOOL:${MSVC}>:_WINDLL _UNICODE UNICODE _CONSOLE>
@@ -48,7 +48,11 @@ target_compile_definitions(${PROJECT_NAME}
 )
 target_link_directories(${PROJECT_NAME} PRIVATE $<$<BOOL:${ENABLE_SLOG}>:${CMAKE_CURRENT_SOURCE_DIR}/contrib/slog>)
 target_link_libraries(${PROJECT_NAME} UPNP::Static IXML::Static $<$<BOOL:${ENABLE_SLOG}>:slog>)
-target_link_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/DEBUG>)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Android")
+    find_library(log-lib log)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${log-lib})
+endif()
+target_link_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/DEF:"${CMAKE_CURRENT_SOURCE_DIR}/src/DLNAModule.def">)
 
 install (TARGETS DLNAModule
     EXPORT DLNAModule

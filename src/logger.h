@@ -21,10 +21,8 @@
 #include <unistd.h>
 #endif
 
-#if not ENABLE_SLOG
 namespace logger {
-
-    const std::filesystem::path logFile;
+#if not ENABLE_SLOG
     enum class LogLevel : const char
     {
         Trace = 'T',
@@ -34,6 +32,8 @@ namespace logger {
         Error = 'E',
         Fatal = 'F'
     };
+
+    extern const std::filesystem::path logFile;
 
     extern "C" bool SetLogFile(const char* path);
     extern "C" void ExternalLog(LogLevel level, const char* format);
@@ -53,9 +53,9 @@ namespace logger {
             *os << std::left
                 << std::put_time(std::localtime(&current), "%F %T ")
                 << "[" << static_cast<char>(level) << "]"
-                << "[thread " << gettid() << "] "
+                << "[thread " << gettid() << "] ";
 #if __cpp_lib_source_location
-                << location.file_name()
+            * os << location.file_name()
                 << "(" << location.line() << "," << location.column() << ","
                 << std::quoted(location.function_name())
                 << "): ";
@@ -71,7 +71,12 @@ namespace logger {
                 {
                     if (*it == '%')
                     {
-                        *os << obj;
+                        if constexpr (std::is_null_pointer_v<T>)
+                            *os << "(compile-time nullptr)";
+                        else if constexpr (std::is_pointer_v<T>)
+                            obj == nullptr ? *os << "(runtime nullptr)" : *os << obj;
+                        else
+                            *os << obj;
                         ++it;
                         break;
                     }
@@ -88,31 +93,40 @@ namespace logger {
             }(std::index_sequence_for<Args...>{});
 
             *os << "\n";
+#endif // ENABLE_STD_FORMAT
         }
     };
+
     template <typename... Args>
     Log(LogLevel, const char*, Args&&...) -> Log<Args...>;
-#endif
+#else // ENABLE_SLOG
+    enum LogLevel
+    {
+        Trace = L_TRACE,
+        Debug = L_DEBUG,
+        Info = L_INFO,
+        Warning = L_WARN,
+        Error = L_ERR,
+        Fatal = L_FATAL
+    };
+#include "../contrib/slog/slog.h"
+#define Log(x, y, ...) do {                                    \
+    slog_tag("DLNAModule", x, y"\n", ##__VA_ARGS__);            \
+} while (0)
+#endif // ENABLE_SLOG
 }
 using namespace logger;
 
-#else // ENABLE_SLOG
-enum LogLevel
-{
-    Trace = 16,
-    Debug = 8,
-    Info = 4,
-    Warning = 2,
-    Error = 1,
-    Fatal = 0
-};
-#include "../contrib/slog/slog.h"
-#define Log(x, y, ...) do {                                  \
-    slog_tag("Log", 3 - x, y"\n", ##__VA_ARGS__);            \
-} while (0)
-#endif // ENABLE_SLOG
-
+#if NDEBUG
 #define CHECK_VARIABLE(x, y) do {                             \
    Log(LogLevel::Debug, #x": " y, x);                         \
 } while (0);
+
+#define TRACE(x) do {                               \
+   Log(LogLevel::Debug, x);                         \
+} while (0);
+#else
+#define CHECK_VARIABLE(x, y) ((void)0)
+#define TRACE(x) ((void)0)
+#endif
 
