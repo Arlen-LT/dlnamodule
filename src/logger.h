@@ -100,6 +100,7 @@ namespace logger {
     template <typename... Args>
     Log(LogLevel, const char*, Args&&...) -> Log<Args...>;
 #else // ENABLE_SLOG
+#include "../contrib/slog/slog.h"
     enum LogLevel
     {
         Trace = L_TRACE,
@@ -109,7 +110,6 @@ namespace logger {
         Error = L_ERR,
         Fatal = L_FATAL
     };
-#include "../contrib/slog/slog.h"
 #define Log(x, y, ...) do {                                    \
     slog_tag("DLNAModule", x, y"\n", ##__VA_ARGS__);            \
 } while (0)
