@@ -47,7 +47,7 @@ target_compile_definitions(${PROJECT_NAME}
     PUBLIC $<$<BOOL:${ENABLE_SLOG}>:ENABLE_SLOG>
 )
 target_link_directories(${PROJECT_NAME} PRIVATE $<$<BOOL:${ENABLE_SLOG}>:${CMAKE_CURRENT_SOURCE_DIR}/contrib/slog>)
-target_link_libraries(${PROJECT_NAME} UPNP::Static IXML::Static $<$<BOOL:${ENABLE_SLOG}>:slog>)
+target_link_libraries(${PROJECT_NAME} PRIVATE UPNP::Static IXML::Static $<$<BOOL:${ENABLE_SLOG}>:slog>)
 if(${CMAKE_SYSTEM_NAME} MATCHES "Android")
     find_library(log-lib log)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${log-lib})
