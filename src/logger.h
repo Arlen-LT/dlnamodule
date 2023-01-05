@@ -77,7 +77,7 @@ namespace logger {
                             obj == nullptr ? *os << "(runtime nullptr)" : *os << obj;
                         else
                             *os << obj;
-                        ++it;
+                        it += 2;
                         break;
                     }
                     else
