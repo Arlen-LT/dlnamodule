@@ -117,13 +117,13 @@ namespace logger {
 }
 using namespace logger;
 
-#if NDEBUG
+#if DEBUG
 #define CHECK_VARIABLE(x, y) do {                             \
    Log(LogLevel::Debug, #x": " y, x);                         \
 } while (0);
 
 #define TRACE(x) do {                               \
-   Log(LogLevel::Debug, x);                         \
+   Log(LogLevel::Trace, x);                         \
 } while (0);
 #else
 #define CHECK_VARIABLE(x, y) ((void)0)

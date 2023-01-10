@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <regex>
+#include <variant>
 
 #include "ixml.h"
 #include "upnptools.h"
@@ -10,6 +11,10 @@
 #include "logger.h"
 #include "DLNAModule.h"
 #include "DLNAConfig.h"
+
+#include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/writer.h"
 
 #if __ANDROID__
 #include <sys/resource.h>
@@ -350,6 +355,101 @@ void DLNAModule::BrowseDLNAFolderByUnity(const char* uuid, int uuidLength, const
     currentTaskMutex.unlock();
 
     cvTaskThread.notify_all();
+}
+
+std::variant<int, std::string> Browse(const std::string& uuid, const std::string objid)
+{
+    std::lock_guard<std::mutex> lock(DLNAModule::GetInstance().UpnpDeviceMapMutex);
+    auto it = DLNAModule::GetInstance().UpnpDeviceMap.find(uuid);
+    if (it != DLNAModule::GetInstance().UpnpDeviceMap.end())
+    {
+        Log(LogLevel::Info, "BrowseRequest: ObjID=%s, name=%s, location=%s", objid, it->second.friendlyName.c_str(), it->second.location.c_str());
+        std::string res = DLNAModule::GetInstance().BrowseAction(objid.c_str(), "BrowseDirectChildren", "*", "0", "10000", "", it->second.location.data());
+
+        res = std::regex_replace(res, std::regex{ "&amp;" }, "&");
+        res = std::regex_replace(res, std::regex{ "&quot;" }, "\"");
+        res = std::regex_replace(res, std::regex{ "&gt;" }, ">");
+        res = std::regex_replace(res, std::regex{ "&lt;" }, "<");
+        res = std::regex_replace(res, std::regex{ "&apos;" }, "'");
+        res = std::regex_replace(res, std::regex{ "<unknown>" }, "unknown");
+
+        if (it->second.manufacturer != "Microsoft Corporation")
+        {
+            res = std::regex_replace(res, std::regex{ R"((pv:subtitleFileType=")([^"]*)(")|(pv:subtitleFileUri=")([^"]*)("))" }, "");
+            res = std::regex_replace(res, std::regex{ "\xc3\x97" }, "x");
+        }
+
+        IXML_Document* parseDoc = ixmlParseBuffer(res.data());
+        if (parseDoc == nullptr)
+        {
+            Log(LogLevel::Error, "Parse result to XML format failed");
+            return -1;
+        }
+        else
+        {
+            char* tmp = ixmlDocumenttoString(parseDoc);
+            res = tmp;
+            ixmlFreeDOMString(tmp);
+        }
+
+        return res;
+    }
+    return -1;
+}
+
+bool BrowseFolderByUnity(const char* json, BrowseDLNAFolderCallback2 OnBrowseResultCallback)
+{
+    using namespace rapidjson;
+    rapidjson::Document request, arguments;
+    request.Parse(json);
+    if (request.GetParseError())
+    {
+        Log(LogLevel::Error, "GetParseError：%d", request.GetParseError());
+        return false;
+    }
+
+    if (!request.HasMember("arguments"))
+    {
+        Log(LogLevel::Error, "No arguments parsed");
+        return false;
+    }
+
+    arguments.CopyFrom(request["arguments"], request.GetAllocator());
+    arguments.ParseInsitu(const_cast<char*>(request["arguments"].GetString()));
+
+    CHECK_VARIABLE(arguments["needSave"].GetBool(), "%d");
+
+    std::string uuid = arguments["uuid"].GetString() ? arguments["uuid"].GetString() : "";
+    std::string objid = arguments["objid"].GetString() ? arguments["objid"].GetString() : "";
+    if (uuid.empty() || objid.empty())
+    {
+        Log(LogLevel::Error, "Broken arguments in browse request");
+        return false;
+    }
+
+    rapidjson::Document response(kObjectType);
+    auto& allocator = response.GetAllocator();
+    response.AddMember("version", Value().SetString("1.0"), allocator);
+    response.AddMember("method", Value("DLNABrowseResponse"), allocator);
+    response.AddMember("request_body", Value().SetString(json, strlen(json), allocator), allocator);
+
+    std::visit([&](auto&& var) {
+        using T = std::decay_t<decltype(var)>;
+        if constexpr (std::is_same_v<T, std::string>)
+        {
+            response.AddMember("results", Value().SetArray().PushBack(Value().SetString(var.c_str(), var.length(), allocator), allocator), allocator);
+            response.AddMember("status", 0, allocator);
+        }
+        else if constexpr (std::is_same_v<T, int>)
+            response.AddMember("status", var, allocator);
+    }, Browse(uuid, objid));
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    response.Accept(writer);
+    Log(LogLevel::Info, "BrowseFolderByJson succeed");
+    OnBrowseResultCallback(buffer.GetString());
+    return true;
 }
 
 void DLNAModule::RemoveServer(const char* udn)

@@ -11,6 +11,7 @@
 #include "upnp.h"
 
 typedef void(*BrowseDLNAFolderCallback)(const char* folderxml, int xmlLength, const char* uuid, int uuidLength, const char* objid, int objidLength);
+typedef void(*BrowseDLNAFolderCallback2)(const char* json);
 typedef void(*AddDLNADeviceCallback)(const char* uuid, int uuidLength, const char* title, int titleLength, const char* iconurl, int iconLength, const char* manufacturer, int manufacturerLength);
 typedef void(*RemoveDLNADeviceCallback)(const char* uuid, int uuidLength);
 
@@ -24,6 +25,13 @@ struct URLInfo
     char* path = nullptr;
     char* option = nullptr;
     char* buffer = nullptr; /* to be freed */
+};
+
+// for internal
+struct BrowseRequest
+{
+    std::string uuid;
+    std::string objid;
 };
 
 struct BrowseDLNAFolderInfo
@@ -156,6 +164,7 @@ private:
     std::queue<std::shared_ptr<BrowseDLNAFolderInfo>> queueBrowseFolderInfo;
     std::mutex deviceQueueMutex, taskQueueMutex, currentTaskMutex;
 
+public:
     std::mutex UpnpDeviceMapMutex;
     std::map<std::string, UpnpDevice> UpnpDeviceMap;
 
@@ -183,6 +192,7 @@ private:
 
     void RemoveServer(const char* udn);
     void ParseNewServer(IXML_Document* doc, const char* location);
+public:
     std::string BrowseAction(const char* objectID, const char* flag, const char* filter, const char* startingIndex, const char* requestCount, const char* sortCriteria, const char* controlUrl);
     std::string GetIconURL(IXML_Element* device, const char* baseURL);
     char* iri2uri(const char* iri);
@@ -193,3 +203,5 @@ private:
     char8_t* GetBestAdapterInterfaceName();
 #endif
 };
+
+bool BrowseFolderByUnity(const char* json, BrowseDLNAFolderCallback2 OnBrowseResultCallback);

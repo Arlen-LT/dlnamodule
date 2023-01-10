@@ -31,6 +31,11 @@ extern "C" DLNA_EXPORT void BrowseDLNAFolder(const char* uuid, int uuidLength, c
     DLNAModule::GetInstance().BrowseDLNAFolderByUnity(uuid, uuidLength, objid, objidLength);
 }
 
+extern "C" DLNA_EXPORT void BrowseDLNAFolder2(const char* json, BrowseDLNAFolderCallback2 OnBrowseResultCallback)
+{
+    BrowseFolderByUnity(json, OnBrowseResultCallback);
+}
+
 extern "C" DLNA_EXPORT void SetBrowseDLNAFolderCallback(BrowseDLNAFolderCallback OnBrowseDLNAFolder)
 {
     DLNAModule::GetInstance().ptrToUnityBrowseDLNAFolderCallback = OnBrowseDLNAFolder;
