@@ -2,3 +2,6 @@
 	path = contrib/pupnp
 	url = ../../skybox/pupnp.git
 	branch = master
+[submodule "contrib/rapidjson"]
+	path = contrib/rapidjson
+	url = https://github.com/tencent/rapidjson.git

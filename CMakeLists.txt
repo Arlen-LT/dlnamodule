@@ -28,6 +28,7 @@ project(DLNAModule)
 
 add_library(${PROJECT_NAME} SHARED)
 add_subdirectory("contrib/pupnp")
+add_subdirectory("contrib/rapidjson")
 
 target_sources(${PROJECT_NAME} 
     PRIVATE
@@ -38,6 +39,9 @@ target_sources(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     "src"
+
+    "contrib/slog"
+    "contrib/rapidjson/include"
 )
 
 target_compile_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/MP /utf-8 /Zc:__cplusplus>)

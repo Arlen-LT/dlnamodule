@@ -10,7 +10,7 @@ $cmake="$cmake_install/bin/cmake.exe"
 & $cmake --version
 # $ninja="C:\tools\cmake-3.24.3-windows-x86_64\bin\ninja.exe"
 # & $ninja --version
-& $cmake --preset win64 -DBUILD_TESTING=FALSE -DUPNP_ENABLE_IPV6=FALSE
+& $cmake --preset win64 -DBUILD_TESTING=FALSE -DUPNP_ENABLE_IPV6=FALSE -DRAPIDJSON_BUILD_CXX11=FALSE -DRAPIDJSON_BUILD_CXX17=TRUE -DRAPIDJSON_BUILD_DOC=FALSE -DRAPIDJSON_BUILD_EXAMPLES=FALSE -DRAPIDJSON_BUILD_TESTS=FALSE
 pushd win64/build
 & $cmake --build . --config Release
 & $cmake --install .
