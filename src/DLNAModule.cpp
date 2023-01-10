@@ -357,13 +357,13 @@ void DLNAModule::BrowseDLNAFolderByUnity(const char* uuid, int uuidLength, const
     cvTaskThread.notify_all();
 }
 
-std::variant<int, std::string> Browse(const std::string& uuid, const std::string objid)
+std::variant<int, std::string> Browse(const std::string& uuid, const std::string& objid)
 {
     std::lock_guard<std::mutex> lock(DLNAModule::GetInstance().UpnpDeviceMapMutex);
     auto it = DLNAModule::GetInstance().UpnpDeviceMap.find(uuid);
     if (it != DLNAModule::GetInstance().UpnpDeviceMap.end())
     {
-        Log(LogLevel::Info, "BrowseRequest: ObjID=%s, name=%s, location=%s", objid, it->second.friendlyName.c_str(), it->second.location.c_str());
+        Log(LogLevel::Info, "BrowseRequest: ObjID=%s, name=%s, location=%s", objid.c_str(), it->second.friendlyName.c_str(), it->second.location.c_str());
         std::string res = DLNAModule::GetInstance().BrowseAction(objid.c_str(), "BrowseDirectChildren", "*", "0", "10000", "", it->second.location.data());
 
         res = std::regex_replace(res, std::regex{ "&amp;" }, "&");
