@@ -356,7 +356,7 @@ void DLNAModule::BrowseDLNAFolderByUnity(const char* uuid, int uuidLength, const
 
     cvTaskThread.notify_all();
 }
-
+#include "base64.h"
 std::variant<int, std::string> Browse(const std::string& uuid, const std::string& objid)
 {
     std::lock_guard<std::mutex> lock(DLNAModule::GetInstance().UpnpDeviceMapMutex);
@@ -392,7 +392,7 @@ std::variant<int, std::string> Browse(const std::string& uuid, const std::string
             ixmlFreeDOMString(tmp);
         }
 
-        return res;
+        return base64_encode(res, false);
     }
     return -1;
 }
