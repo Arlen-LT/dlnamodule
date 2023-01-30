@@ -194,6 +194,8 @@ private:
     void ParseNewServer(IXML_Document* doc, const char* location);
 public:
     std::string BrowseAction(const char* objectID, const char* flag, const char* filter, const char* startingIndex, const char* requestCount, const char* sortCriteria, const char* controlUrl);
+    std::string ReplaceAll(const char* src, int srcLen, const char* old_value, const char* new_value);
+    std::string ConvertXMLtoString(const char* src); 
     std::string GetIconURL(IXML_Element* device, const char* baseURL);
     char* iri2uri(const char* iri);
     char* DecodeUri(char* str);
