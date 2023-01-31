@@ -27,13 +27,6 @@ struct URLInfo
     char* buffer = nullptr; /* to be freed */
 };
 
-// for internal
-struct BrowseRequest
-{
-    std::string uuid;
-    std::string objid;
-};
-
 struct UpnpDevice
 {
     std::string UDN;
@@ -58,12 +51,6 @@ struct UpnpDevice
     {
     }
 
-    UpnpDevice(const std::string& udn)
-        : UDN(udn)
-        , deviceType(UnknownDevice)
-    {
-    }
-
     UpnpDevice(const std::string& udn, const std::string& friendlyName, const std::string& location, const std::string& iconUrl, const std::string& manufacturer)
         : UDN(udn)
         , friendlyName(friendlyName)
@@ -82,7 +69,6 @@ public:
 
 private:
     static DLNAModule _dlnaInst;
-
     static int UpnpRegisterClientCallback(Upnp_EventType event_type, const void* p_event, void* p_cookie);
 
 public:
@@ -99,33 +85,20 @@ private:
 public:
     std::mutex UpnpDeviceMapMutex;
     std::map<std::string, UpnpDevice> UpnpDeviceMap;
-
-    volatile bool isDLNAModuleRunning = false;
-    std::condition_variable cvTaskThread;
-
-#if __cplusplus >= 202002L
     std::atomic_flag discoverAtomicFlag;
-#else
-    std::atomic_flag discoverAtomicFlag{ false };
-#endif
 
 public:
-    void StartupModule();
-    void ShutdownModule();
-    void Refresh();
+    void Initialize();
+    void Finitialize();
+    void Search();
     void Update();
+    int BrowseAction(const char* objectID, const char* flag, const char* filter, const char* startingIndex, const char* requestCount, const char* sortCriteria, const char* controlUrl, void* cookie);
 
 private:
-    void StartDiscover();
-    void StopDiscover();
-    void TaskThread();
-
     void RemoveServer(const char* udn);
     void ParseNewServer(IXML_Document* doc, const char* location);
-public:
     std::string ReplaceAll(const char* src, int srcLen, const char* old_value, const char* new_value);
     std::string ConvertHTMLtoXML(const char* src); 
-    int BrowseAction(const char* objectID, const char* flag, const char* filter, const char* startingIndex, const char* requestCount, const char* sortCriteria, const char* controlUrl, void* cookie);
     std::string GetIconURL(IXML_Element* device, const char* baseURL);
     char* iri2uri(const char* iri);
     char* DecodeUri(char* str);
@@ -136,4 +109,5 @@ public:
 #endif
 };
 
+static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event, void* p_cookie);
 bool BrowseFolderByUnity(const char* json, BrowseDLNAFolderCallback OnBrowseResultCallback);

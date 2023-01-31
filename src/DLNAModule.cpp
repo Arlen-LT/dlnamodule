@@ -32,28 +32,9 @@ DLNAModule& DLNAModule::GetInstance()
     return _dlnaInst;
 }
 
-void DLNAModule::StartupModule()
+void DLNAModule::Initialize()
 {
     Log(LogLevel::Info, "Starting DLNAModule-%s-%.8s, built at %s", DLNA_VERSION_REF, DLNA_VERSION_COMMIT, BUILD_TIMESTAMP);
-    StartDiscover();
-    std::thread(&DLNAModule::TaskThread, &GetInstance()).detach();
-}
-
-void DLNAModule::ShutdownModule()
-{
-    StopDiscover();
-    cvTaskThread.notify_all();
-}
-
-void DLNAModule::Refresh()
-{
-    discoverAtomicFlag.clear(std::memory_order_release);
-    cvTaskThread.notify_all();
-}
-
-void DLNAModule::StartDiscover()
-{
-    /* Search for media servers */
 #if __ANDROID__
     int res = UpnpInit2(nullptr, 0);
 #elif _WIN64
@@ -85,15 +66,23 @@ void DLNAModule::StartDiscover()
         return;
     }
     Log(LogLevel::Info, "Searching server success");
-    isDLNAModuleRunning = true;
 }
 
-void DLNAModule::StopDiscover()
+void DLNAModule::Finitialize()
 {
     UpnpUnRegisterClient(handle);
     if (UpnpFinish() == UPNP_E_SUCCESS)
         Log(LogLevel::Info, "Upnp SDK finished success");
-    isDLNAModuleRunning = false;
+}
+
+void DLNAModule::Search()
+{
+    Log(LogLevel::Info, "Searching servers...");
+    {
+        std::scoped_lock<std::mutex> lock(UpnpDeviceMapMutex);
+        UpnpDeviceMap.clear();
+    }
+    UpnpSearchAsync(handle, MAX_SEARCH_TIME, "ssdp:all", &GetInstance());
 }
 
 int DLNAModule::UpnpRegisterClientCallback(Upnp_EventType eventType, const void* event, void* cookie)
@@ -160,40 +149,7 @@ void DLNAModule::Update()
     }
 }
 
-void DLNAModule::TaskThread()
-{
-    std::mutex taskMutex;
-    std::unique_lock<std::mutex> taskThreadLock(taskMutex);
-    while (isDLNAModuleRunning)
-    {
-        if (!discoverAtomicFlag.test_and_set(std::memory_order_acquire))
-        {
-            Log(LogLevel::Info, "Searching servers...");
-            {
-                std::scoped_lock<std::mutex> lock(UpnpDeviceMapMutex);
-                UpnpDeviceMap.clear();
-            }
-            UpnpSearchAsync(handle, MAX_SEARCH_TIME, "ssdp:all", &GetInstance());
-        }
-
-        cvTaskThread.wait(taskThreadLock,
-            [this]
-            {
-#if __cplusplus >= 202002L
-                return !isDLNAModuleRunning
-                || !discoverAtomicFlag.test();
-#else
-                bool flag = discoverAtomicFlag.test_and_set(std::memory_order_acquire);
-            if (flag == false)
-                discoverAtomicFlag.clear(std::memory_order_release);
-            return !isDLNAModuleRunning
-                || !flag;
-#endif
-            });
-    }
-}
-
-int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event, void* p_cookie)
+static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event, void* p_cookie)
 {
     std::string json, result;
     BrowseDLNAFolderCallback OnBrowseResultCallback;
