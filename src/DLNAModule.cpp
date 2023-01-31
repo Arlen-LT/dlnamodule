@@ -8,6 +8,7 @@
 #include "upnptools.h"
 #include "config.h"
 
+#include "base64.h"
 #include "logger.h"
 #include "DLNAModule.h"
 #include "DLNAConfig.h"
@@ -157,17 +158,6 @@ void DLNAModule::Update()
             queueRemoveDeviceInfo.pop();
         }
     }
-
-    if (ptrToUnityBrowseDLNAFolderCallback)
-    {
-        std::lock_guard<std::mutex> lock(taskQueueMutex);
-        while (!queueBrowseFolderInfo.empty())
-        {
-            std::shared_ptr<BrowseDLNAFolderInfo> infoToTreate = queueBrowseFolderInfo.front();
-            ptrToUnityBrowseDLNAFolderCallback(infoToTreate->folderXml, infoToTreate->folderXmlLength, infoToTreate->uuid, infoToTreate->uuidLength, infoToTreate->objid, infoToTreate->objidLength);
-            queueBrowseFolderInfo.pop();
-        }
-    }
 }
 
 void DLNAModule::TaskThread()
@@ -186,87 +176,82 @@ void DLNAModule::TaskThread()
             UpnpSearchAsync(handle, MAX_SEARCH_TIME, "ssdp:all", &GetInstance());
         }
 
-        BrowseDLNAFolderInfo* pTask = nullptr;
-        {
-            std::lock_guard<std::mutex> lock(currentTaskMutex);
-            std::swap(currentBrowseFolderTask, pTask);
-        }
-
-        if (pTask != nullptr)
-        {
-            std::lock_guard<std::mutex> lock(UpnpDeviceMapMutex);
-            auto it = UpnpDeviceMap.find(pTask->uuid);
-            if (it != UpnpDeviceMap.end())
-            {
-                Log(LogLevel::Info, "BrowseRequest: ObjID=%s, name=%s, location=%s", pTask->objid, it->second.friendlyName.c_str(), it->second.location.c_str());
-                std::string res = BrowseAction(pTask->objid, "BrowseDirectChildren", "*", "0", "10000", "", it->second.location.data());
-
-                res = std::regex_replace(res, std::regex{ "&amp;" }, "&");
-                res = std::regex_replace(res, std::regex{ "&quot;" }, "\"");
-                res = std::regex_replace(res, std::regex{ "&gt;" }, ">");
-                res = std::regex_replace(res, std::regex{ "&lt;" }, "<");
-                res = std::regex_replace(res, std::regex{ "&apos;" }, "'");
-                res = std::regex_replace(res, std::regex{ "<unknown>" }, "unknown");
-
-                if (it->second.manufacturer != "Microsoft Corporation")
-                {
-                    res = std::regex_replace(res, std::regex{ R"((pv:subtitleFileType=")([^"]*)(")|(pv:subtitleFileUri=")([^"]*)("))" }, "");
-                    res = std::regex_replace(res, std::regex{ "\xc3\x97" }, "x");
-                }
-
-                IXML_Document* parseDoc = ixmlParseBuffer(res.data());
-                if (parseDoc == nullptr)
-                {
-                    Log(LogLevel::Error, "Parse result to XML format failed");
-                    res.clear();
-                }
-                else
-                {
-                    char* tmp = ixmlDocumenttoString(parseDoc);
-                    res = tmp;
-                    ixmlFreeDOMString(tmp);
-                }
-
-                if (res.empty())
-                    Log(LogLevel::Error, "Browse failed");
-                pTask->SetXml(res);
-
-                std::lock_guard<std::mutex> taskQueueLock(taskQueueMutex);
-                queueBrowseFolderInfo.emplace(std::make_shared<BrowseDLNAFolderInfo>(pTask->uuid, pTask->uuidLength, pTask->objid, pTask->objidLength, pTask->folderXml, pTask->folderXmlLength));
-            }
-        }
-
         cvTaskThread.wait(taskThreadLock,
             [this]
             {
 #if __cplusplus >= 202002L
                 return !isDLNAModuleRunning
-                || !discoverAtomicFlag.test()
-                || currentBrowseFolderTask;
+                || !discoverAtomicFlag.test();
 #else
                 bool flag = discoverAtomicFlag.test_and_set(std::memory_order_acquire);
             if (flag == false)
                 discoverAtomicFlag.clear(std::memory_order_release);
             return !isDLNAModuleRunning
-                || !flag
-                || currentBrowseFolderTask;
+                || !flag;
 #endif
             });
     }
 }
 
-std::string DLNAModule::BrowseAction(const char* objectID,
+int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event, void* p_cookie)
+{
+    std::string json, result;
+    BrowseDLNAFolderCallback OnBrowseResultCallback;
+    auto status = [&]()
+    {
+        if (eventType != UPNP_CONTROL_ACTION_COMPLETE)
+            return -1;
+
+        auto pp_tuple = static_cast<std::tuple<std::string, BrowseDLNAFolderCallback>**>(p_cookie);
+        std::tie(json, OnBrowseResultCallback) = **pp_tuple;
+        delete (*pp_tuple);
+
+        const UpnpActionComplete* p_result = (UpnpActionComplete*)p_event;
+        char* rawHTML = ixmlDocumenttoString(UpnpActionComplete_get_ActionResult(p_result));
+        if (rawHTML == nullptr)
+            return -3;
+
+        result = DLNAModule::GetInstance().ConvertHTMLtoXML(rawHTML);
+        ixmlFreeDOMString(rawHTML);
+
+        IXML_Document* parseDoc = ixmlParseBuffer(result.data());
+        if (parseDoc == nullptr)
+        {
+            Log(LogLevel::Error, "Parse result to XML format failed");
+            return -4;
+        }
+
+        return 0;
+    }();
+
+    using namespace rapidjson;
+    rapidjson::Document response(kObjectType);
+    auto& allocator = response.GetAllocator();
+    response.AddMember("version", Value().SetString("1.0"), allocator);
+    response.AddMember("method", "DLNABrowseResponse", allocator);
+    response.AddMember("request_body", Value().SetString(json.data(), json.length(), allocator), allocator);
+    response.AddMember("results", Value().SetArray().PushBack(Value().SetString(base64_encode(result, false).c_str(), allocator), allocator), allocator);
+    response.AddMember("status", status, allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    response.Accept(writer);
+
+    if (!OnBrowseResultCallback)
+        OnBrowseResultCallback(buffer.GetString());
+    return status;
+}
+
+int DLNAModule::BrowseAction(const char* objectID,
     const char* flag,
     const char* filter,
     const char* startingIndex,
     const char* requestCount,
     const char* sortCriteria,
-    const char* controlUrl)
+    const char* controlUrl,
+    void* cookie)
 {
     IXML_Document* actionDoc = nullptr;
-    IXML_Document* browseResultXMLDocument = nullptr;
-    char* rawXML = nullptr;
-    std::string browseResultString;
 
     int res = UpnpAddToAction(&actionDoc, "Browse",
         CONTENT_DIRECTORY_SERVICE_TYPE, "ObjectID", objectID);
@@ -315,83 +300,37 @@ std::string DLNAModule::BrowseAction(const char* objectID,
         goto browseActionCleanup;
     }
 
-    res = UpnpSendAction(handle,
+    CHECK_VARIABLE(&cookie, "%p");
+    res = UpnpSendActionAsync(handle,
         controlUrl,
         CONTENT_DIRECTORY_SERVICE_TYPE,
         nullptr, /* ignored in SDK, must be NULL */
         actionDoc,
-        &browseResultXMLDocument);
+        UpnpSendActionCallBack,
+        &cookie);
 
-    if (res || !browseResultXMLDocument)
+    if (res)
     {
-        Log(LogLevel::Error, "UpnpSendAction return %s", UpnpGetErrorMessage(res));
+        Log(LogLevel::Error, "UpnpSendActionAsync return %s", UpnpGetErrorMessage(res));
         goto browseActionCleanup;
     }
 
-    rawXML = ixmlDocumenttoString(browseResultXMLDocument);
-    if (rawXML != nullptr)
-    {
-        browseResultString = ConvertXMLtoString(rawXML);
-        ixmlFreeDOMString(rawXML);
-    }
-
 browseActionCleanup:
-    if (browseResultXMLDocument)
-        ixmlDocument_free(browseResultXMLDocument);
-
     ixmlDocument_free(actionDoc);
-    return browseResultString;
+    return res;
 }
 
-
-void DLNAModule::BrowseDLNAFolderByUnity(const char* uuid, int uuidLength, const char* objid, int objidLength)
+bool BrowseFolderByUnity(const char* json, const BrowseDLNAFolderCallback OnBrowseResultCallback)
 {
-    currentTaskMutex.lock();
-    if (currentBrowseFolderTask)
-    {
-        delete currentBrowseFolderTask;
-    }
-    currentBrowseFolderTask = new BrowseDLNAFolderInfo(uuid, uuidLength, objid, objidLength, nullptr, 0);
-    currentTaskMutex.unlock();
+    if (!json || !OnBrowseResultCallback)
+        return false;
 
-    cvTaskThread.notify_all();
-}
-#include "base64.h"
-std::variant<int, std::string> Browse(const std::string& uuid, const std::string& objid)
-{
-    std::lock_guard<std::mutex> lock(DLNAModule::GetInstance().UpnpDeviceMapMutex);
-    auto it = DLNAModule::GetInstance().UpnpDeviceMap.find(uuid);
-    if (it != DLNAModule::GetInstance().UpnpDeviceMap.end())
-    {
-        Log(LogLevel::Info, "BrowseRequest: ObjID=%s, name=%s, location=%s", objid.c_str(), it->second.friendlyName.c_str(), it->second.location.c_str());
-        std::string res = DLNAModule::GetInstance().BrowseAction(objid.c_str(), "BrowseDirectChildren", "*", "0", "10000", "", it->second.location.data());
-
-        IXML_Document* parseDoc = ixmlParseBuffer(res.data());
-        if (parseDoc == nullptr)
-        {
-            Log(LogLevel::Error, "Parse result to XML format failed");
-            return -1;
-        }
-        else
-        {
-            char* tmp = ixmlDocumenttoString(parseDoc);
-            res = tmp;
-            ixmlFreeDOMString(tmp);
-        }
-
-        return base64_encode(res, false);
-    }
-    return -1;
-}
-
-bool BrowseFolderByUnity(const char* json, BrowseDLNAFolderCallback2 OnBrowseResultCallback)
-{
     using namespace rapidjson;
     rapidjson::Document request, arguments;
     request.Parse(json);
-    if (request.GetParseError())
+    if (int errorCode = request.GetParseError())
     {
-        Log(LogLevel::Error, "GetParseError：%d", request.GetParseError());
+        Log(LogLevel::Error, "GetParseError：%d", errorCode);
         return false;
     }
 
@@ -404,39 +343,31 @@ bool BrowseFolderByUnity(const char* json, BrowseDLNAFolderCallback2 OnBrowseRes
     arguments.CopyFrom(request["arguments"], request.GetAllocator());
     arguments.ParseInsitu(const_cast<char*>(request["arguments"].GetString()));
 
-    CHECK_VARIABLE(arguments["needSave"].GetBool(), "%d");
-
-    std::string uuid = arguments["uuid"].GetString() ? arguments["uuid"].GetString() : "";
-    std::string objid = arguments["objid"].GetString() ? arguments["objid"].GetString() : "";
-    if (uuid.empty() || objid.empty())
+    auto uuid = arguments["uuid"].GetString();
+    auto objid = arguments["objid"].GetString();
+    if (!uuid || !objid)
     {
         Log(LogLevel::Error, "Broken arguments in browse request");
         return false;
     }
 
-    rapidjson::Document response(kObjectType);
-    auto& allocator = response.GetAllocator();
-    response.AddMember("version", Value().SetString("1.0"), allocator);
-    response.AddMember("method", Value("DLNABrowseResponse"), allocator);
-    response.AddMember("request_body", Value().SetString(json, strlen(json), allocator), allocator);
+    auto&& server = [](const std::string& uuid)->std::optional<UpnpDevice>
+    {
+        std::lock_guard<std::mutex> lock(DLNAModule::GetInstance().UpnpDeviceMapMutex);
+        auto it = DLNAModule::GetInstance().UpnpDeviceMap.find(uuid);
+        if (it != DLNAModule::GetInstance().UpnpDeviceMap.end())
+            return it->second;
+        return {};
+    }(uuid);
 
-    std::visit([&](auto&& var) {
-        using T = std::decay_t<decltype(var)>;
-        if constexpr (std::is_same_v<T, std::string>)
-        {
-            response.AddMember("results", Value().SetArray().PushBack(Value().SetString(var.c_str(), var.length(), allocator), allocator), allocator);
-            response.AddMember("status", 0, allocator);
-        }
-        else if constexpr (std::is_same_v<T, int>)
-            response.AddMember("status", var, allocator);
-    }, Browse(uuid, objid));
+    if (!server)
+    {
+        Log(LogLevel::Error, "Couldn't find device %s", uuid);
+        return false;
+    }
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    response.Accept(writer);
-    Log(LogLevel::Info, "BrowseFolderByJson succeed");
-    OnBrowseResultCallback(buffer.GetString());
-    return true;
+    Log(LogLevel::Info, "BrowseRequest: ObjID=%s, name=%s, location=%s", objid, server->friendlyName.c_str(), server->location.c_str());
+    return (DLNAModule::GetInstance().BrowseAction(objid, "BrowseDirectChildren", "*", "0", "10000", "", server->location.data(), new std::tuple<std::string, BrowseDLNAFolderCallback>(json, OnBrowseResultCallback)) == 0);
 }
 
 void DLNAModule::RemoveServer(const char* udn)
@@ -606,7 +537,7 @@ std::string DLNAModule::ReplaceAll(const char* src, int srcLen, const char* oldV
     return ret;
 }
 
-std::string DLNAModule::ConvertXMLtoString(const char* src)
+std::string DLNAModule::ConvertHTMLtoXML(const char* src)
 {
     int strLen = strlen(src);
     std::string srcstr(src, strLen);

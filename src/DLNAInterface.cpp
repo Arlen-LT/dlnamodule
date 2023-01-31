@@ -26,19 +26,9 @@ extern "C" DLNA_EXPORT void SKYBOXDLNAUpdate()
     DLNAModule::GetInstance().Update();
 }
 
-extern "C" DLNA_EXPORT void BrowseDLNAFolder(const char* uuid, int uuidLength, const char* objid, int objidLength)
-{
-    DLNAModule::GetInstance().BrowseDLNAFolderByUnity(uuid, uuidLength, objid, objidLength);
-}
-
-extern "C" DLNA_EXPORT void BrowseDLNAFolder2(const char* json, BrowseDLNAFolderCallback2 OnBrowseResultCallback)
+extern "C" DLNA_EXPORT void BrowseDLNAFolder2(const char* json, BrowseDLNAFolderCallback OnBrowseResultCallback)
 {
     BrowseFolderByUnity(json, OnBrowseResultCallback);
-}
-
-extern "C" DLNA_EXPORT void SetBrowseDLNAFolderCallback(BrowseDLNAFolderCallback OnBrowseDLNAFolder)
-{
-    DLNAModule::GetInstance().ptrToUnityBrowseDLNAFolderCallback = OnBrowseDLNAFolder;
 }
 
 extern "C" DLNA_EXPORT void SetAddDLNADeviceCallback(AddDLNADeviceCallback OnAddDLNADevice)
