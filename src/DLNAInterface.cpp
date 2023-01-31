@@ -8,17 +8,17 @@
 
 extern "C" DLNA_EXPORT void SKYBOXStartupDLNA()
 {
-    DLNAModule::GetInstance().StartupModule();
+    DLNAModule::GetInstance().Initialize();
 }
 
 extern "C" DLNA_EXPORT void SKYBOXShutdownDLNA()
 {
-    DLNAModule::GetInstance().ShutdownModule();
+    DLNAModule::GetInstance().Finitialize();
 }
 
 extern "C" DLNA_EXPORT void SKYBOXRefreshDLNA()
 {
-    DLNAModule::GetInstance().Refresh();
+    DLNAModule::GetInstance().Search();
 }
 
 extern "C" DLNA_EXPORT void SKYBOXDLNAUpdate()
