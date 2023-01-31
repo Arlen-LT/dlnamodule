@@ -237,7 +237,7 @@ int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event, void* 
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     response.Accept(writer);
 
-    if (!OnBrowseResultCallback)
+    if (OnBrowseResultCallback)
         OnBrowseResultCallback(buffer.GetString());
     return status;
 }
