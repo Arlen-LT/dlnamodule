@@ -178,6 +178,15 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
             return -4;
         }
 
+        char* tmp = ixmlDocumenttoString(parseDoc);
+        if (!tmp)
+            return -5;
+
+        result = tmp;
+        ixmlFreeDOMString(tmp);
+
+        if (result.empty())
+            Log(LogLevel::Error, "Browse failed");
         return 0;
     }();
 
