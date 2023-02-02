@@ -208,7 +208,7 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
     return status;
 }
 
-int BrowseAction(const char* objectID,
+IXML_Document* DLNAModule::BrowseAction(const char* objectID,
     const char* flag,
     const char* filter,
     const char* startingIndex,
@@ -218,6 +218,7 @@ int BrowseAction(const char* objectID,
     void* cookie)
 {
     IXML_Document* actionDoc = nullptr;
+    IXML_Document* browseResultXMLDocument = nullptr;
 
     int res = UpnpAddToAction(&actionDoc, "Browse",
         CONTENT_DIRECTORY_SERVICE_TYPE, "ObjectID", objectID);
@@ -274,7 +275,7 @@ int BrowseAction(const char* objectID,
         UpnpSendActionCallBack,
         &cookie);
 
-    if (res)
+    if (res != UPNP_E_SUCCESS)
     {
         Log(LogLevel::Error, "UpnpSendActionAsync return %s", UpnpGetErrorMessage(res));
         goto browseActionCleanup;
@@ -282,10 +283,273 @@ int BrowseAction(const char* objectID,
 
 browseActionCleanup:
     ixmlDocument_free(actionDoc);
-    return res;
+    return browseResultXMLDocument;
 }
 
-bool BrowseFolderByUnity(const char* json, const BrowseDLNAFolderCallback OnBrowseResultCallback)
+
+void DLNAModule::BrowseDLNAFolderByUnity(const char* uuid, int uuidLength, const char* objid, int objidLength)
+{
+    currentTaskMutex.lock();
+    if (currentBrowseFolderTask)
+    {
+        delete currentBrowseFolderTask;
+    }
+    currentBrowseFolderTask = new BrowseDLNAFolderInfo(uuid, uuidLength, objid, objidLength, nullptr, 0);
+    currentTaskMutex.unlock();
+
+    cvTaskThread.notify_all();
+}
+#include "base64.h"
+
+#if _WIN32
+int vasprintf(char** strp, const char* format, va_list ap)
+{
+    int len = _vscprintf(format, ap);
+    if (len == -1)
+        return -1;
+    char* str = (char*)malloc((size_t)len + 1);
+    if (!str)
+        return -1;
+    int retval = vsnprintf(str, len + 1, format, ap);
+    if (retval == -1) {
+        free(str);
+        return -1;
+    }
+    *strp = str;
+    return retval;
+}
+
+int asprintf(char** strp, const char* fmt, ...)
+{
+    va_list ap;
+    int ret;
+
+    va_start(ap, fmt);
+    ret = vasprintf(strp, fmt, ap);
+    va_end(ap);
+    return ret;
+}
+#endif
+
+/*
+ * Extracts the result document from a SOAP response
+ */
+IXML_Document* parseBrowseResult(IXML_Document* p_doc)
+{
+    assert(p_doc);
+
+    // ixml*_getElementsByTagName will ultimately only case the pointer to a Node
+    // pointer, and pass it to a private function. Don't bother have a IXML_Document
+    // version of getChildElementValue
+    const char* psz_raw_didl = ixmlElement_getFirstChildElementValue((IXML_Element*)p_doc, "Result");
+
+    if (!psz_raw_didl)
+        return NULL;
+
+    /* First, try parsing the buffer as is */
+    IXML_Document* p_result_doc = ixmlParseBuffer(psz_raw_didl);
+    if (!p_result_doc) {
+        /* Missing namespaces confuse the ixml parser. This is a very ugly
+         * hack but it is needeed until devices start sending valid XML.
+         *
+         * It works that way:
+         *
+         * The DIDL document is extracted from the Result tag, then wrapped into
+         * a valid XML header and a new root tag which contains missing namespace
+         * definitions so the ixml parser understands it.
+         *
+         * If you know of a better workaround, please oh please fix it */
+        const char* psz_xml_result_fmt = "<?xml version=\"1.0\" ?>"
+            "<Result xmlns:sec=\"urn:samsung:metadata:2009\">%s</Result>";
+
+        char* psz_xml_result_string = NULL;
+        if (-1 == asprintf(&psz_xml_result_string,
+            psz_xml_result_fmt,
+            psz_raw_didl))
+            return NULL;
+
+        p_result_doc = ixmlParseBuffer(psz_xml_result_string);
+        free(psz_xml_result_string);
+    }
+
+    if (!p_result_doc)
+        return NULL;
+
+    IXML_NodeList* p_elems = ixmlDocument_getElementsByTagName(p_result_doc,
+        "DIDL-Lite");
+
+    IXML_Node* p_node = ixmlNodeList_item(p_elems, 0);
+    ixmlNodeList_free(p_elems);
+
+    return (IXML_Document*)p_node;
+}
+
+struct item
+{
+    const char* objectID,
+        * title,
+        * psz_artist,
+        * psz_genre,
+        * psz_album,
+        * psz_date,
+        * psz_orig_track_nb,
+        * psz_album_artist,
+        * psz_albumArt;
+};
+
+bool TryParseItem(IXML_Element* element)
+{
+    const char* objectID,
+        * title,
+        * psz_artist,
+        * psz_genre,
+        * psz_album,
+        * psz_date,
+        * psz_orig_track_nb,
+        * psz_album_artist,
+        * psz_albumArt;
+
+    enum MEDIA_TYPE
+    {
+        VIDEO = 0,
+        AUDIO,
+        IMAGE,
+        CONTAINER
+    };
+
+    MEDIA_TYPE media_type;
+    objectID = ixmlElement_getAttribute(element, "id");
+    if (!objectID)
+        return false;
+    title = ixmlElement_getFirstChildElementValue(element, "dc:title");
+    if (!title)
+        return false;
+    const char* psz_subtitles = ixmlElement_getFirstChildElementValue(element, "sec:CaptionInfo");
+    if (!psz_subtitles &&
+        !(psz_subtitles = ixmlElement_getFirstChildElementValue(element, "sec:CaptionInfoEx")))
+        psz_subtitles = ixmlElement_getFirstChildElementValue(element, "pv:subtitlefile");
+    psz_artist = ixmlElement_getFirstChildElementValue(element, "upnp:artist");
+    psz_genre = ixmlElement_getFirstChildElementValue(element, "upnp:genre");
+    psz_album = ixmlElement_getFirstChildElementValue(element, "upnp:album");
+    psz_date = ixmlElement_getFirstChildElementValue(element, "dc:date");
+    psz_orig_track_nb = ixmlElement_getFirstChildElementValue(element, "upnp:originalTrackNumber");
+    psz_album_artist = ixmlElement_getFirstChildElementValue(element, "upnp:albumArtist");
+    psz_albumArt = ixmlElement_getFirstChildElementValue(element, "upnp:albumArtURI");
+    const char* psz_media_type = ixmlElement_getFirstChildElementValue(element, "upnp:class");
+    if (strncmp(psz_media_type, "object.item.videoItem", 21) == 0)
+        media_type = VIDEO;
+    else if (strncmp(psz_media_type, "object.item.audioItem", 21) == 0)
+        media_type = AUDIO;
+    else if (strncmp(psz_media_type, "object.item.imageItem", 21) == 0)
+        media_type = IMAGE;
+    else if (strncmp(psz_media_type, "object.container", 16) == 0)
+        media_type = CONTAINER;
+    else
+        return false;
+    return true;
+}
+
+std::variant<rapidjson::Value, int> Browse(const std::string& uuid, const std::string& objid, auto& allocator)
+{
+    std::string location;
+    {
+        std::lock_guard<std::mutex> lock(DLNAModule::GetInstance().UpnpDeviceMapMutex);
+        auto it = DLNAModule::GetInstance().UpnpDeviceMap.find(uuid);
+        if (it != DLNAModule::GetInstance().UpnpDeviceMap.end())
+        {
+            location = it->second.location;
+            Log(LogLevel::Info, "BrowseRequest: ObjID=%s, name=%s, location=%s", objid.c_str(), it->second.friendlyName.c_str(), it->second.location.c_str());
+
+        }
+    }
+    std::string StartingIndex = "0";
+    std::string RequestedCount = "5000";
+    const char* psz_TotalMatches = "0";
+    const char* psz_NumberReturned = "0";
+    long  l_reqCount = 0;
+
+    using namespace rapidjson;
+    rapidjson::Value resultList(rapidjson::kArrayType);
+
+    do
+    {
+        IXML_Document* p_response = DLNAModule::GetInstance().BrowseAction(objid.c_str(),
+            "BrowseDirectChildren",
+            "*",
+            StartingIndex.c_str(),
+            // Some servers don't understand "0" as "no-limit"
+            RequestedCount.c_str(), /* RequestedCount */
+            "", /* SortCriteria */
+            location.c_str()
+        );
+        if (!p_response)
+        {
+            Log(LogLevel::Error, "No response from browse() action");
+            return -1;
+        }
+
+        psz_TotalMatches = ixmlElement_getFirstChildElementValue((IXML_Element*)p_response, "TotalMatches");
+        psz_NumberReturned = ixmlElement_getFirstChildElementValue((IXML_Element*)p_response, "NumberReturned");
+
+        StartingIndex = std::to_string(std::stol(psz_NumberReturned) + std::stol(StartingIndex));
+        l_reqCount = std::stol(psz_TotalMatches) - std::stol(StartingIndex);
+        RequestedCount = std::to_string(l_reqCount);
+
+        IXML_Document* p_result = parseBrowseResult(p_response);
+
+        ixmlDocument_free(p_response);
+
+        if (!p_result)
+        {
+            Log(LogLevel::Error, "browse() response parsing failed");
+            return -1;
+        }
+
+#ifndef NDEBUG
+        Log(LogLevel::Info, "Got DIDL document: %s", ixmlPrintDocument(p_result));
+#endif
+
+        IXML_NodeList* containerNodeList = ixmlDocument_getElementsByTagName(p_result, "container");
+
+        if (containerNodeList)
+        {
+            for (unsigned int i = 0; i < ixmlNodeList_length(containerNodeList); i++)
+            {
+                auto itemElement = (IXML_Element*)ixmlNodeList_item(containerNodeList, i);
+                auto tmp = ixmlPrintNode((IXML_Node*)itemElement);
+                if (TryParseItem(itemElement))
+                    resultList.PushBack(Value().SetObject()
+                        .AddMember("isDirectory", true, allocator)
+                        .AddMember("xml", Value().SetString(tmp, allocator), allocator)
+                        , allocator);
+                ixmlFreeDOMString(tmp);
+            }
+            ixmlNodeList_free(containerNodeList);
+        }
+
+        IXML_NodeList* itemNodeList = ixmlDocument_getElementsByTagName(p_result, "item");
+        if (itemNodeList)
+        {
+            for (unsigned int i = 0; i < ixmlNodeList_length(itemNodeList); i++)
+            {
+                auto itemElement = (IXML_Element*)ixmlNodeList_item(itemNodeList, i);
+                auto tmp = ixmlPrintNode((IXML_Node*)itemElement);
+                if (TryParseItem(itemElement))
+                    resultList.PushBack(Value().SetObject()
+                        .AddMember("isDirectory", false, allocator)
+                        .AddMember("xml", Value().SetString(tmp, allocator), allocator)
+                        , allocator);
+                ixmlFreeDOMString(tmp);
+            }
+            ixmlNodeList_free(itemNodeList);
+        }
+
+        ixmlDocument_free(p_result);
+    } while (l_reqCount);
+    return resultList;
+}
+
+bool BrowseFolderByUnity(const char* json, BrowseDLNAFolderCallback2 OnBrowseResultCallback)
 {
     if (!json || !OnBrowseResultCallback)
         return false;
@@ -325,11 +589,16 @@ bool BrowseFolderByUnity(const char* json, const BrowseDLNAFolderCallback OnBrow
         return {};
     }(uuid);
 
-    if (!server)
+    std::visit([&](auto&& var) {
+        using T = std::decay_t<decltype(var)>;
+    if constexpr (std::is_same_v<T, rapidjson::Value>)
     {
-        Log(LogLevel::Error, "Couldn't find device %s", uuid);
-        return false;
+        response.AddMember("results", var, allocator);
+        response.AddMember("status", 0, allocator);
     }
+    else if constexpr (std::is_same_v<T, int>)
+        response.AddMember("status", var, allocator);
+        }, Browse(uuid, objid, allocator));
 
     Log(LogLevel::Info, "BrowseRequest: ObjID=%s, name=%s, location=%s", objid, server->friendlyName.c_str(), server->location.c_str());
     return BrowseAction(objid, "BrowseDirectChildren", "*", "0", "10000", "", server->location.data(), new std::tuple<std::string, BrowseDLNAFolderCallback>(json, OnBrowseResultCallback)) == 0;
