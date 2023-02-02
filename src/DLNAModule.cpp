@@ -422,14 +422,14 @@ bool BrowseFolderByUnity(const char* json, BrowseDLNAFolderCallback2 OnBrowseRes
 
     std::visit([&](auto&& var) {
         using T = std::decay_t<decltype(var)>;
-        if constexpr (std::is_same_v<T, std::string>)
-        {
-            response.AddMember("results", Value().SetArray().PushBack(Value().SetString(var.c_str(), var.length(), allocator), allocator), allocator);
-            response.AddMember("status", 0, allocator);
-        }
-        else if constexpr (std::is_same_v<T, int>)
-            response.AddMember("status", var, allocator);
-    }, Browse(uuid, objid));
+    if constexpr (std::is_same_v<T, std::string>)
+    {
+        response.AddMember("results", Value().SetArray().PushBack(Value().SetString(var.c_str(), var.length(), allocator), allocator), allocator);
+        response.AddMember("status", 0, allocator);
+    }
+    else if constexpr (std::is_same_v<T, int>)
+        response.AddMember("status", var, allocator);
+        }, Browse(uuid, objid));
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -583,7 +583,7 @@ std::string DLNAModule::ReplaceAll(const char* src, int srcLen, const char* oldV
         pCur = strstr(pCur, oldValue);
     }
 
-    char* newChar = new char[srcLen + (lenSrcTarValue - lenSrcOldValue) * findCount];
+    char* newChar = new char[srcLen + (lenSrcTarValue - lenSrcOldValue) * findCount + 1];
     const char* pSrcCur = src;
     char* pTarCur = newChar;
     for (int iIndex = 0; iIndex < findCount; ++iIndex)
@@ -600,16 +600,17 @@ std::string DLNAModule::ReplaceAll(const char* src, int srcLen, const char* oldV
     memcpy(pTarCur, pSrcCur, cpyLen);
     pTarCur += cpyLen;
 
-    std::string ret(newChar, srcLen + (lenSrcTarValue - lenSrcOldValue) * findCount);
+    newChar[srcLen + (lenSrcTarValue - lenSrcOldValue) * findCount] = '\0';
+    std::string ret(newChar);
     delete[] newChar;
+    delete[] posAllOldValue;
 
     return ret;
 }
 
 std::string DLNAModule::ConvertXMLtoString(const char* src)
 {
-    int strLen = strlen(src);
-    std::string srcstr(src, strLen);
+    std::string srcstr(src);
 
     int lengthBefore = 0;
     do
