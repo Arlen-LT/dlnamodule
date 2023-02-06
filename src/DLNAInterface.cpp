@@ -1,4 +1,5 @@
 #include "DLNAModule.h"
+#include "UpnpCommand.h"
 
 #if __ANDROID__
 #define DLNA_EXPORT

@@ -11,7 +11,6 @@
 
 #include "upnp.h"
 
-typedef void(*BrowseDLNAFolderCallback)(const char* json);
 typedef void(*AddDLNADeviceCallback)(const char* uuid, int uuidLength, const char* title, int titleLength, const char* iconurl, int iconLength, const char* manufacturer, int manufacturerLength);
 typedef void(*RemoveDLNADeviceCallback)(const char* uuid, int uuidLength);
 
@@ -96,6 +95,3 @@ private:
 #endif
 };
 
-int BrowseAction(const char* objectID, const char* flag, const char* filter, const char* startingIndex, const char* requestCount, const char* sortCriteria, const char* controlUrl, void* cookie);
-static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event, void* p_cookie);
-bool BrowseFolderByUnity(const char* json, BrowseDLNAFolderCallback OnBrowseResultCallback);
