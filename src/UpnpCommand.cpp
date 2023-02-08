@@ -17,7 +17,7 @@
 
 template <typename T>
 const std::string CreateResponse(const std::string& version, const std::string& method, const std::string& request, const T& result, int status)
-    requires std::is_same_v<T, std::vector<item>> || std::is_same_v<T, std::string> || std::is_same_v<T, std::nullptr_t>
+    requires std::is_same_v<T, std::vector<Item>> || std::is_same_v<T, std::string> || std::is_same_v<T, std::nullptr_t>
 {
     using namespace rapidjson;
     rapidjson::Document response(kObjectType);
@@ -26,16 +26,24 @@ const std::string CreateResponse(const std::string& version, const std::string& 
     response.AddMember("method", Value().SetString(method.data(), method.length(), allocator), allocator);
     response.AddMember("request_body", Value().SetString(request.data(), request.length(), allocator), allocator);
 
-    if constexpr (std::is_same_v<T, std::vector<item>>)
+    if constexpr (std::is_same_v<T, std::vector<Item>>)
     {
         rapidjson::Value resultList(kArrayType);
         for (auto& it : result)
             resultList.PushBack(Value().SetObject()
-                .AddMember("isDirectory", true, allocator)
-                .AddMember("url", Value().SetString(it.psz_resource_url.data(), it.psz_resource_url.size(), allocator), allocator)
-                .AddMember("filename", Value().SetString(it.title.data(), it.title.size(), allocator), allocator)
                 .AddMember("objid", Value().SetString(it.objectID.data(), it.objectID.size(), allocator), allocator)
+                .AddMember("filename", Value().SetString(it.title.data(), it.title.size(), allocator), allocator)
+                .AddMember("url", Value().SetString(it.psz_resource_url.data(), it.psz_resource_url.size(), allocator), allocator)
+                .AddMember("type", it.media_type, allocator)
                 .AddMember("date", Value().SetString(it.psz_date.data(), it.psz_date.size(), allocator), allocator)
+                .AddMember("duration", Value().SetString(it.psz_duration.data(), it.psz_duration.size(), allocator), allocator)
+                .AddMember("subtitle", Value().SetString(it.psz_subtitle.data(), it.psz_subtitle.size(), allocator), allocator)
+                .AddMember("audio", Value().SetString(it.psz_audio_url.data(), it.psz_audio_url.size(), allocator), allocator)
+                .AddMember("genre", Value().SetString(it.psz_genre.data(), it.psz_genre.size(), allocator), allocator)
+                .AddMember("album", Value().SetString(it.psz_album.data(), it.psz_album.size(), allocator), allocator)
+                .AddMember("albumArtist", Value().SetString(it.psz_album_artist.data(), it.psz_album_artist.size(), allocator), allocator)
+                .AddMember("albumArtURI", Value().SetString(it.psz_albumArt.data(), it.psz_albumArt.size(), allocator), allocator)
+                .AddMember("originalTrackNumber", Value().SetString(it.psz_orig_track_nb.data(), it.psz_orig_track_nb.size(), allocator), allocator)
                 , allocator);
 
         response.AddMember("results", resultList, allocator);
@@ -92,7 +100,7 @@ std::variant<std::string, int> Resolve(IXML_Document* p_response)
     return result;
 }
 
-std::variant<std::vector<item>, int> Resolve2(IXML_Document* p_response)
+std::variant<std::vector<Item>, int> Resolve2(IXML_Document* p_response)
 {
     IXML_Document* p_result = parseBrowseResult(p_response);
     if (!p_result)
@@ -101,7 +109,7 @@ std::variant<std::vector<item>, int> Resolve2(IXML_Document* p_response)
         return -1;
     }
 
-    std::vector<item> itemVector;
+    std::vector<Item> itemVector;
     IXML_NodeList* containerNodeList = ixmlDocument_getElementsByTagName(p_result, "container");
     if (containerNodeList)
     {
@@ -120,7 +128,7 @@ std::variant<std::vector<item>, int> Resolve2(IXML_Document* p_response)
     {
         for (unsigned int i = 0; i < ixmlNodeList_length(itemNodeList); i++)
         {
-            auto itemElement = (IXML_Element*)ixmlNodeList_item(containerNodeList, i);
+            auto itemElement = (IXML_Element*)ixmlNodeList_item(itemNodeList, i);
             auto&& opt = TryParseItem(itemElement, false);
             if (opt)
                 itemVector.push_back(std::move(opt.value()));
@@ -163,7 +171,7 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
     std::string response2;
     std::visit([&](auto&& var) {
         using T = std::decay_t<decltype(var)>;
-    if constexpr (std::is_same_v<T, std::vector<item>>)
+    if constexpr (std::is_same_v<T, std::vector<Item>>)
         response2 = CreateResponse("2.0", "DLNABrowseResponse", req_json, var, 0);
     else if constexpr (std::is_same_v<T, int>)
         response2 = CreateResponse("2.0", "DLNABrowseResponse", req_json, nullptr, var);
@@ -187,7 +195,10 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
     ixmlDocument_free(p_response);
 
     if (OnBrowseResultCallback)
+    {
         OnBrowseResultCallback(response1.data());
+        OnBrowseResultCallback(response2.data());
+    }
     return 0;
 }
 
@@ -354,7 +365,7 @@ IXML_Document* parseBrowseResult(IXML_Document* p_doc)
     return (IXML_Document*)p_node;
 }
 
-std::optional<item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
+std::optional<Item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
 {
     const char* objectID,
         * title,
@@ -366,15 +377,7 @@ std::optional<item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
         * psz_album_artist,
         * psz_albumArt;
 
-    enum MEDIA_TYPE
-    {
-        VIDEO = 0,
-        AUDIO,
-        IMAGE,
-        CONTAINER
-    };
-
-    MEDIA_TYPE media_type;
+    Item::MEDIA_TYPE media_type;
     objectID = ixmlElement_getAttribute(itemElement, "id");
     if (!objectID)
         return {};
@@ -394,27 +397,34 @@ std::optional<item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
     psz_albumArt = ixmlElement_getFirstChildElementValue(itemElement, "upnp:albumArtURI");
     const char* psz_media_type = ixmlElement_getFirstChildElementValue(itemElement, "upnp:class");
     if (strncmp(psz_media_type, "object.item.videoItem", 21) == 0)
-        media_type = VIDEO;
+        media_type = Item::VIDEO;
     else if (strncmp(psz_media_type, "object.item.audioItem", 21) == 0)
-        media_type = AUDIO;
+        media_type = Item::AUDIO;
     else if (strncmp(psz_media_type, "object.item.imageItem", 21) == 0)
-        media_type = IMAGE;
+        media_type = Item::IMAGE;
     else if (strncmp(psz_media_type, "object.container", 16) == 0)
-        media_type = CONTAINER;
+        media_type = Item::CONTAINER;
     else
         return {};
 
+    Item file;
+    file.objectID = objectID ? objectID : "";
+    file.title = title ? title : "";
+    file.media_type = media_type;
+    file.psz_artist = psz_artist ? psz_artist : "";
+    file.psz_genre = psz_genre ? psz_genre : "";
+    file.psz_album = psz_album ? psz_album : "";
+    file.psz_date = psz_date ? psz_date : "";
+    file.psz_orig_track_nb = psz_orig_track_nb ? psz_orig_track_nb : "";
+    file.psz_album_artist = psz_album_artist ? psz_album_artist : "";
+    file.psz_albumArt = psz_albumArt ? psz_albumArt : "";
+
     if (AsDirectory)
-        return std::make_optional<item>(objectID,
-            title,
-            psz_artist,
-            psz_genre,
-            psz_album,
-            psz_date,
-            psz_orig_track_nb,
-            psz_album_artist,
-            psz_albumArt,
-            nullptr /* Container has no url */);
+    {
+        if (file.media_type != Item::CONTAINER)
+            Log(LogLevel::Error, "Unexpected type in container enumeration");
+        return file;
+    }
 
     /* Try to extract all resources in DIDL */
     IXML_NodeList* p_resource_list = ixmlDocument_getElementsByTagName((IXML_Document*)itemElement, "res");
@@ -426,36 +436,46 @@ std::optional<item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
         return {};
     }
 
-    const char* psz_resource_url = nullptr;
-
     for (int index = 0; index < list_lenght; index++)
     {
         IXML_Element* p_resource = (IXML_Element*)ixmlNodeList_item(p_resource_list, index);
         const char* rez_type = ixmlElement_getAttribute(p_resource, "protocolInfo");
 
-        if (strncmp(rez_type, "http-get:*:video/", 17) == 0 && media_type == VIDEO)
+        if (strncmp(rez_type, "http-get:*:video/", 17) == 0 && media_type == Item::VIDEO)
         {
-            psz_resource_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
+            const char* psz_resource_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
             if (!psz_resource_url)
                 return {};
+            file.psz_resource_url = psz_resource_url;
+
             const char* psz_duration = ixmlElement_getAttribute(p_resource, "duration");
+            file.psz_duration = psz_duration ? psz_duration : "";
+
             const char* psz_subtitle = ixmlElement_getAttribute(p_resource, "pv:subtitleFileUri");
+            file.psz_subtitle = psz_subtitle ? psz_subtitle : "";
         }
         else if (strncmp(rez_type, "http-get:*:image/", 17) == 0)
             switch (media_type)
             {
-            case IMAGE:
-                psz_resource_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
+            case Item::IMAGE:
+            {
+                const char* psz_resource_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
                 if (!psz_resource_url)
                     return {};
-                //[[maybe_unused]]const char* psz_duration = 
-                ixmlElement_getAttribute(p_resource, "duration");
-                break;
-            case VIDEO:
-            case AUDIO:
+                file.psz_resource_url = psz_resource_url;
+
+                const char* psz_duration = ixmlElement_getAttribute(p_resource, "duration");
+                file.psz_duration = psz_duration ? psz_duration : "";
+            }
+            break;
+            case Item::VIDEO:
+            case Item::AUDIO:
+            {
                 psz_albumArt = ixmlElement_getFirstChildElementValue(p_resource, "res");
+                file.psz_albumArt = psz_albumArt ? psz_albumArt : "";
+            }
                 break;
-            case CONTAINER:
+            case Item::CONTAINER:
                 Log(LogLevel::Warning, "Unexpected object.container in item enumeration");
                 continue;
             }
@@ -463,31 +483,25 @@ std::optional<item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
             const char* psz_text_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
         else if (strncmp(rez_type, "http-get:*:audio/", 17) == 0)
         {
-            if (media_type == AUDIO)
+            if (media_type == Item::AUDIO)
             {
-                psz_resource_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
+                const char* psz_resource_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
                 if (!psz_resource_url)
                     return {};
+                file.psz_resource_url = psz_resource_url;
+
                 const char* psz_duration = ixmlElement_getAttribute(p_resource, "duration");
+                file.psz_duration = psz_duration ? psz_duration : "";
             }
             else
             {
                 const char* psz_audio_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
+                file.psz_duration = psz_audio_url ? psz_audio_url : "";
             }
         }
     }
     ixmlNodeList_free(p_resource_list);
-
-    return std::make_optional<item>(objectID,
-        title,
-        psz_artist,
-        psz_genre,
-        psz_album,
-        psz_date,
-        psz_orig_track_nb,
-        psz_album_artist,
-        psz_albumArt,
-        psz_resource_url);
+    return file;
 }
 
 //std::variant<rapidjson::Value, int> Browse(const std::string& uuid, const std::string& objid, auto& allocator)
