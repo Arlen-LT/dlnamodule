@@ -29,23 +29,23 @@ const std::string CreateResponse(const std::string& version, const std::string& 
     if constexpr (std::is_same_v<T, std::vector<Item>>)
     {
         rapidjson::Value resultList(kArrayType);
-        for (Item& it : result)
+        for (const Item& it : result)
             resultList.PushBack(Value().SetObject()
                 .AddMember("objid", Value().SetString(it.objectID.data(), it.objectID.size(), allocator), allocator)
                 .AddMember("filename", Value().SetString(it.filename.data(), it.filename.size(), allocator), allocator)
-                .AddMember("url", Value().SetString(it.url.data(), it.psz_resource_url.size(), allocator), allocator)
+                .AddMember("url", Value().SetString(it.url.data(), it.url.size(), allocator), allocator)
                 .AddMember("type", it.media_type, allocator)
-                .AddMember("date", Value().SetString(it.date.data(), it.psz_date.size(), allocator), allocator)
-                .AddMember("duration", Value().SetString(it.duration.data(), it.psz_duration.size(), allocator), allocator)
+                .AddMember("date", Value().SetString(it.date.data(), it.date.size(), allocator), allocator)
+                .AddMember("duration", Value().SetString(it.duration.data(), it.duration.size(), allocator), allocator)
                 .AddMember("size", Value().SetString(it.size.data(), it.size.size(), allocator), allocator)
-                .AddMember("resolution", Value().SetString(it.resolution.data(), it.psz_duration.size(), allocator), allocator)
-                .AddMember("subtitle", Value().SetString(it.subtitle.data(), it.psz_subtitle.size(), allocator), allocator)
-                .AddMember("audio", Value().SetString(it.audio_url.data(), it.psz_audio_url.size(), allocator), allocator)
-                .AddMember("genre", Value().SetString(it.genre.data(), it.psz_genre.size(), allocator), allocator)
-                .AddMember("album", Value().SetString(it.album.data(), it.psz_album.size(), allocator), allocator)
-                .AddMember("albumArtist", Value().SetString(it.album_artist.data(), it.psz_album_artist.size(), allocator), allocator)
-                .AddMember("albumArtURI", Value().SetString(it.albumArtURI.data(), it.psz_albumArt.size(), allocator), allocator)
-                .AddMember("originalTrackNumber", Value().SetString(it.orig_track_nb.data(), it.psz_orig_track_nb.size(), allocator), allocator)
+                .AddMember("resolution", Value().SetString(it.resolution.data(), it.resolution.size(), allocator), allocator)
+                .AddMember("subtitle", Value().SetString(it.subtitle.data(), it.subtitle.size(), allocator), allocator)
+                .AddMember("audio", Value().SetString(it.audio_url.data(), it.audio_url.size(), allocator), allocator)
+                .AddMember("genre", Value().SetString(it.genre.data(), it.genre.size(), allocator), allocator)
+                .AddMember("album", Value().SetString(it.album.data(), it.album.size(), allocator), allocator)
+                .AddMember("albumArtist", Value().SetString(it.album_artist.data(), it.album_artist.size(), allocator), allocator)
+                .AddMember("albumArtURI", Value().SetString(it.albumArtURI.data(), it.albumArtURI.size(), allocator), allocator)
+                .AddMember("originalTrackNumber", Value().SetString(it.orig_track_nb.data(), it.orig_track_nb.size(), allocator), allocator)
                 , allocator);
 
         response.AddMember("results", resultList, allocator);
@@ -148,8 +148,13 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
 
     CHECK_VARIABLE(p_cookie, "%p");
     auto& cookie = *static_cast<Cookie*>(p_cookie);
-    auto [req_json, OnBrowseResultCallback] = cookie;
-    delete (&cookie);
+
+#if __clang__ // lambda can capture struct-binding since C++20, supported by MSVC and GCC but not Clang(<=15.0)
+    const std::string& req_json = std::get<0>(cookie);
+    BrowseDLNAFolderCallback OnBrowseResultCallback = std::get<BrowseDLNAFolderCallback>(cookie);
+#else
+    auto& [req_json, OnBrowseResultCallback] = cookie;
+#endif
 
     IXML_Document* p_response = UpnpActionComplete_get_ActionResult((UpnpActionComplete*)p_event);
     if (!p_response)
@@ -181,6 +186,7 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
         }, Resolve2(p_response));
 
     ixmlDocument_free(p_response);
+    delete (&cookie);
 
     if (OnBrowseResultCallback)
     {
