@@ -25,7 +25,7 @@ struct Item
         psz_date,
         psz_orig_track_nb,
         psz_album_artist,
-        psz_albumArt;
+        psz_albumArtURI;
 
     //Item() {}
     //Item(Item&& other) noexcept

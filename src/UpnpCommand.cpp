@@ -375,7 +375,7 @@ std::optional<Item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
         * psz_date,
         * psz_orig_track_nb,
         * psz_album_artist,
-        * psz_albumArt;
+        * psz_albumArtURI;
 
     Item::MEDIA_TYPE media_type;
     objectID = ixmlElement_getAttribute(itemElement, "id");
@@ -394,7 +394,7 @@ std::optional<Item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
     psz_date = ixmlElement_getFirstChildElementValue(itemElement, "dc:date");
     psz_orig_track_nb = ixmlElement_getFirstChildElementValue(itemElement, "upnp:originalTrackNumber");
     psz_album_artist = ixmlElement_getFirstChildElementValue(itemElement, "upnp:albumArtist");
-    psz_albumArt = ixmlElement_getFirstChildElementValue(itemElement, "upnp:albumArtURI");
+    psz_albumArtURI = ixmlElement_getFirstChildElementValue(itemElement, "upnp:albumArtURI");
     const char* psz_media_type = ixmlElement_getFirstChildElementValue(itemElement, "upnp:class");
     if (strncmp(psz_media_type, "object.item.videoItem", 21) == 0)
         media_type = Item::VIDEO;
@@ -417,7 +417,7 @@ std::optional<Item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
     file.psz_date = psz_date ? psz_date : "";
     file.psz_orig_track_nb = psz_orig_track_nb ? psz_orig_track_nb : "";
     file.psz_album_artist = psz_album_artist ? psz_album_artist : "";
-    file.psz_albumArt = psz_albumArt ? psz_albumArt : "";
+    file.psz_albumArtURI = psz_albumArtURI ? psz_albumArtURI : "";
 
     if (AsDirectory)
     {
@@ -471,8 +471,8 @@ std::optional<Item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
             case Item::VIDEO:
             case Item::AUDIO:
             {
-                psz_albumArt = ixmlElement_getFirstChildElementValue(p_resource, "res");
-                file.psz_albumArt = psz_albumArt ? psz_albumArt : "";
+                psz_albumArtURI = ixmlElement_getFirstChildElementValue(p_resource, "res");
+                file.psz_albumArtURI = psz_albumArtURI ? psz_albumArtURI : "";
             }
                 break;
             case Item::CONTAINER:
