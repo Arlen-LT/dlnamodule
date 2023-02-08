@@ -14,7 +14,7 @@ struct Item
     }media_type;
 
     std::string objectID,
-        title,
+        filename,
         url,
         duration,
         date,
