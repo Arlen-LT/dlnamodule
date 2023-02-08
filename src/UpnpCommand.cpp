@@ -15,6 +15,9 @@
 #include "logger.h"
 #include "URLHandler.h"
 
+// Make a way to use static_assert(false) while this template is specialized.  Cf. https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2593r0.html
+template <typename...> inline constexpr bool always_false = false;
+
 template <typename T>
 const std::string CreateResponse(const std::string& version, const std::string& method, const std::string& request, const T& result, int status)
     requires std::is_same_v<T, std::vector<Item>> || std::is_same_v<T, std::string> || std::is_same_v<T, std::nullptr_t>
@@ -57,10 +60,7 @@ const std::string CreateResponse(const std::string& version, const std::string& 
     else if constexpr (std::is_same_v<T, std::nullptr_t>)
         response.AddMember("results", "", allocator);
     else
-        []<bool flag = false>()
-    {
-        static_assert(flag, "Unsupported type");
-    }();
+        static_assert(always_false<T>, "Unsupported type");
 
     response.AddMember("status", status, allocator);
 
@@ -182,7 +182,7 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
         response2 = CreateResponse("2.0", "DLNABrowseResponse", req_json, var, 0);
     else if constexpr (std::is_same_v<T, int>)
         response2 = CreateResponse("2.0", "DLNABrowseResponse", req_json, nullptr, var);
-    else static_assert(false);
+    else static_assert(always_false<T>, "Unsupported type");
         }, Resolve2(p_response));
 
     ixmlDocument_free(p_response);
@@ -474,7 +474,7 @@ std::optional<Item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
                 psz_albumArtURI = ixmlElement_getFirstChildElementValue(p_resource, "res");
                 file.albumArtURI = psz_albumArtURI ? psz_albumArtURI : "";
             }
-                break;
+            break;
             case Item::CONTAINER:
                 Log(LogLevel::Warning, "Unexpected object.container in item enumeration");
                 continue;
