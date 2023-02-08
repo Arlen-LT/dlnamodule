@@ -33,6 +33,7 @@ add_subdirectory("contrib/rapidjson")
 target_sources(${PROJECT_NAME} 
     PRIVATE
     "src/base64.cpp"
+    "src/UpnpCommand.cpp"
     "src/URLHandler.cpp"
     "src/DLNAModule.cpp" 
     "src/DLNAInterface.cpp"

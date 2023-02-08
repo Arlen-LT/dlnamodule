@@ -15,17 +15,19 @@ struct Item
 
     std::string objectID,
         title,
-        psz_resource_url,
-        psz_duration,
-        psz_subtitle, 
-        psz_audio_url, 
-        psz_artist,
-        psz_genre,
-        psz_album,
-        psz_date,
-        psz_orig_track_nb,
-        psz_album_artist,
-        psz_albumArtURI;
+        url,
+        duration,
+        date,
+        size,
+        resolution,
+        subtitle,
+        audio_url,
+        artist,
+        genre,
+        album,
+        orig_track_nb,
+        album_artist,
+        albumArtURI;
 
     //Item() {}
     //Item(Item&& other) noexcept

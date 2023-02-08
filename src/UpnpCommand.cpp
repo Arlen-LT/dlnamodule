@@ -29,21 +29,23 @@ const std::string CreateResponse(const std::string& version, const std::string& 
     if constexpr (std::is_same_v<T, std::vector<Item>>)
     {
         rapidjson::Value resultList(kArrayType);
-        for (auto& it : result)
+        for (Item& it : result)
             resultList.PushBack(Value().SetObject()
                 .AddMember("objid", Value().SetString(it.objectID.data(), it.objectID.size(), allocator), allocator)
-                .AddMember("filename", Value().SetString(it.title.data(), it.title.size(), allocator), allocator)
-                .AddMember("url", Value().SetString(it.psz_resource_url.data(), it.psz_resource_url.size(), allocator), allocator)
+                .AddMember("filename", Value().SetString(it.filename.data(), it.filename.size(), allocator), allocator)
+                .AddMember("url", Value().SetString(it.url.data(), it.psz_resource_url.size(), allocator), allocator)
                 .AddMember("type", it.media_type, allocator)
-                .AddMember("date", Value().SetString(it.psz_date.data(), it.psz_date.size(), allocator), allocator)
-                .AddMember("duration", Value().SetString(it.psz_duration.data(), it.psz_duration.size(), allocator), allocator)
-                .AddMember("subtitle", Value().SetString(it.psz_subtitle.data(), it.psz_subtitle.size(), allocator), allocator)
-                .AddMember("audio", Value().SetString(it.psz_audio_url.data(), it.psz_audio_url.size(), allocator), allocator)
-                .AddMember("genre", Value().SetString(it.psz_genre.data(), it.psz_genre.size(), allocator), allocator)
-                .AddMember("album", Value().SetString(it.psz_album.data(), it.psz_album.size(), allocator), allocator)
-                .AddMember("albumArtist", Value().SetString(it.psz_album_artist.data(), it.psz_album_artist.size(), allocator), allocator)
-                .AddMember("albumArtURI", Value().SetString(it.psz_albumArt.data(), it.psz_albumArt.size(), allocator), allocator)
-                .AddMember("originalTrackNumber", Value().SetString(it.psz_orig_track_nb.data(), it.psz_orig_track_nb.size(), allocator), allocator)
+                .AddMember("date", Value().SetString(it.date.data(), it.psz_date.size(), allocator), allocator)
+                .AddMember("duration", Value().SetString(it.duration.data(), it.psz_duration.size(), allocator), allocator)
+                .AddMember("size", Value().SetString(it.size.data(), it.size.size(), allocator), allocator)
+                .AddMember("resolution", Value().SetString(it.resolution.data(), it.psz_duration.size(), allocator), allocator)
+                .AddMember("subtitle", Value().SetString(it.subtitle.data(), it.psz_subtitle.size(), allocator), allocator)
+                .AddMember("audio", Value().SetString(it.audio_url.data(), it.psz_audio_url.size(), allocator), allocator)
+                .AddMember("genre", Value().SetString(it.genre.data(), it.psz_genre.size(), allocator), allocator)
+                .AddMember("album", Value().SetString(it.album.data(), it.psz_album.size(), allocator), allocator)
+                .AddMember("albumArtist", Value().SetString(it.album_artist.data(), it.psz_album_artist.size(), allocator), allocator)
+                .AddMember("albumArtURI", Value().SetString(it.albumArtURI.data(), it.psz_albumArt.size(), allocator), allocator)
+                .AddMember("originalTrackNumber", Value().SetString(it.orig_track_nb.data(), it.psz_orig_track_nb.size(), allocator), allocator)
                 , allocator);
 
         response.AddMember("results", resultList, allocator);
@@ -156,17 +158,17 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
         return -1;
     }
 
-    std::string response1;
-    std::visit([&](auto&& var) {
-        using T = std::decay_t<decltype(var)>;
-    if constexpr (std::is_same_v<T, std::string>)
-    {
-        response1 = CreateResponse("1.0", "DLNABrowseResponse", req_json, var, 0);
-    }
-    else if constexpr (std::is_same_v<T, int>)
-        response1 = CreateResponse("1.0", "DLNABrowseResponse", req_json, nullptr, var);
-    else static_assert(false);
-        }, Resolve(p_response));
+    //std::string response1;
+    //std::visit([&](auto&& var) {
+    //    using T = std::decay_t<decltype(var)>;
+    //if constexpr (std::is_same_v<T, std::string>)
+    //{
+    //    response1 = CreateResponse("1.0", "DLNABrowseResponse", req_json, var, 0);
+    //}
+    //else if constexpr (std::is_same_v<T, int>)
+    //    response1 = CreateResponse("1.0", "DLNABrowseResponse", req_json, nullptr, var);
+    //else static_assert(false);
+    //    }, Resolve(p_response));
 
     std::string response2;
     std::visit([&](auto&& var) {
@@ -177,26 +179,12 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
         response2 = CreateResponse("2.0", "DLNABrowseResponse", req_json, nullptr, var);
     else static_assert(false);
         }, Resolve2(p_response));
-    //std::string StartingIndex = "0";
-    //std::string RequestedCount = "5000";
-    //const char* psz_TotalMatches = "0";
-    //const char* psz_NumberReturned = "0";
-    //long  l_reqCount = 0;
-    //do {
-    //    psz_TotalMatches = ixmlElement_getFirstChildElementValue((IXML_Element*)p_response, "TotalMatches");
-    //    psz_NumberReturned = ixmlElement_getFirstChildElementValue((IXML_Element*)p_response, "NumberReturned");
 
-    //    StartingIndex = std::to_string(std::stol(psz_NumberReturned) + std::stol(StartingIndex));
-    //    l_reqCount = std::stol(psz_TotalMatches) - std::stol(StartingIndex);
-    //    RequestedCount = std::to_string(l_reqCount);
-    //} while (l_reqCount);
-
-    CHECK_VARIABLE(response2, "%s");
     ixmlDocument_free(p_response);
 
     if (OnBrowseResultCallback)
     {
-        OnBrowseResultCallback(response1.data());
+        //OnBrowseResultCallback(response1.data());
         OnBrowseResultCallback(response2.data());
     }
     return 0;
@@ -409,15 +397,15 @@ std::optional<Item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
 
     Item file;
     file.objectID = objectID ? objectID : "";
-    file.title = title ? title : "";
+    file.filename = title ? title : "";
     file.media_type = media_type;
-    file.psz_artist = psz_artist ? psz_artist : "";
-    file.psz_genre = psz_genre ? psz_genre : "";
-    file.psz_album = psz_album ? psz_album : "";
-    file.psz_date = psz_date ? psz_date : "";
-    file.psz_orig_track_nb = psz_orig_track_nb ? psz_orig_track_nb : "";
-    file.psz_album_artist = psz_album_artist ? psz_album_artist : "";
-    file.psz_albumArtURI = psz_albumArtURI ? psz_albumArtURI : "";
+    file.artist = psz_artist ? psz_artist : "";
+    file.genre = psz_genre ? psz_genre : "";
+    file.album = psz_album ? psz_album : "";
+    file.date = psz_date ? psz_date : "";
+    file.orig_track_nb = psz_orig_track_nb ? psz_orig_track_nb : "";
+    file.album_artist = psz_album_artist ? psz_album_artist : "";
+    file.albumArtURI = psz_albumArtURI ? psz_albumArtURI : "";
 
     if (AsDirectory)
     {
@@ -446,13 +434,19 @@ std::optional<Item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
             const char* psz_resource_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
             if (!psz_resource_url)
                 return {};
-            file.psz_resource_url = psz_resource_url;
+            file.url = psz_resource_url;
 
             const char* psz_duration = ixmlElement_getAttribute(p_resource, "duration");
-            file.psz_duration = psz_duration ? psz_duration : "";
+            file.duration = psz_duration ? psz_duration : "";
+
+            const char* psz_size = ixmlElement_getAttribute(p_resource, "size");
+            file.size = psz_size ? psz_size : "";
+
+            const char* psz_resolution = ixmlElement_getAttribute(p_resource, "resolution");
+            file.resolution = psz_resolution ? psz_resolution : "";
 
             const char* psz_subtitle = ixmlElement_getAttribute(p_resource, "pv:subtitleFileUri");
-            file.psz_subtitle = psz_subtitle ? psz_subtitle : "";
+            file.subtitle = psz_subtitle ? psz_subtitle : "";
         }
         else if (strncmp(rez_type, "http-get:*:image/", 17) == 0)
             switch (media_type)
@@ -462,17 +456,17 @@ std::optional<Item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
                 const char* psz_resource_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
                 if (!psz_resource_url)
                     return {};
-                file.psz_resource_url = psz_resource_url;
+                file.url = psz_resource_url;
 
                 const char* psz_duration = ixmlElement_getAttribute(p_resource, "duration");
-                file.psz_duration = psz_duration ? psz_duration : "";
+                file.duration = psz_duration ? psz_duration : "";
             }
             break;
             case Item::VIDEO:
             case Item::AUDIO:
             {
                 psz_albumArtURI = ixmlElement_getFirstChildElementValue(p_resource, "res");
-                file.psz_albumArtURI = psz_albumArtURI ? psz_albumArtURI : "";
+                file.albumArtURI = psz_albumArtURI ? psz_albumArtURI : "";
             }
                 break;
             case Item::CONTAINER:
@@ -488,58 +482,21 @@ std::optional<Item> TryParseItem(IXML_Element* itemElement, bool AsDirectory)
                 const char* psz_resource_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
                 if (!psz_resource_url)
                     return {};
-                file.psz_resource_url = psz_resource_url;
+                file.url = psz_resource_url;
 
                 const char* psz_duration = ixmlElement_getAttribute(p_resource, "duration");
-                file.psz_duration = psz_duration ? psz_duration : "";
+                file.duration = psz_duration ? psz_duration : "";
             }
             else
             {
                 const char* psz_audio_url = ixmlElement_getFirstChildElementValue(p_resource, "res");
-                file.psz_duration = psz_audio_url ? psz_audio_url : "";
+                file.audio_url = psz_audio_url ? psz_audio_url : "";
             }
         }
     }
     ixmlNodeList_free(p_resource_list);
     return file;
 }
-
-//std::variant<rapidjson::Value, int> Browse(const std::string& uuid, const std::string& objid, auto& allocator)
-//{
-//    std::string location;
-//    {
-//        std::lock_guard<std::mutex> lock(DLNAModule::GetInstance().UpnpDeviceMapMutex);
-//        auto it = DLNAModule::GetInstance().UpnpDeviceMap.find(uuid);
-//        if (it != DLNAModule::GetInstance().UpnpDeviceMap.end())
-//        {
-//            location = it->second.location;
-//            Log(LogLevel::Info, "BrowseRequest: ObjID=%s, name=%s, location=%s", objid.c_str(), it->second.friendlyName.c_str(), it->second.location.c_str());
-//
-//        }
-//    }
-//    std::string StartingIndex = "0";
-//    std::string RequestedCount = "5000";
-//    const char* psz_TotalMatches = "0";
-//    const char* psz_NumberReturned = "0";
-//    long  l_reqCount = 0;
-//
-//
-//
-//    do
-//    {
-//        IXML_Document* p_response = BrowseAction(objid.c_str(),
-//            "BrowseDirectChildren",
-//            "*",
-//            StartingIndex.c_str(),
-//            // Some servers don't understand "0" as "no-limit"
-//            RequestedCount.c_str(), /* RequestedCount */
-//            "", /* SortCriteria */
-//            location.c_str()
-//        );
-//
-//    } while (l_reqCount);
-//    return resultList;
-//}
 
 bool BrowseFolderByUnity(const char* json, BrowseDLNAFolderCallback OnBrowseResultCallback)
 {
