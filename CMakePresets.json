@@ -19,7 +19,20 @@
             "cacheVariables": {
                 "CMAKE_CONFIGURATION_TYPES": "Release;RelWithDebInfo;Debug",
                 "CMAKE_C_COMPILER": "cl.exe",
-                "CMAKE_CXX_COMPILER": "cl.exe"
+                "CMAKE_CXX_COMPILER": "cl.exe",
+
+                // pupnp
+                "DOWNLOAD_AND_BUILD_DEPS": false,
+                "UPNP_ENABLE_IPV6": false,
+                "UPNP_BUILD_SAMPLES": false,
+                "UPNP_BUILD_TEST": false,
+
+                // rapidjson
+                "RAPIDJSON_BUILD_CXX11": false,
+                "RAPIDJSON_BUILD_CXX17": true,
+                "RAPIDJSON_BUILD_DOC": false,
+                "RAPIDJSON_BUILD_TESTS": false,
+                "RAPIDJSON_BUILD_EXAMPLES": false
             },
             "condition": {
                 "type": "equals",
@@ -39,7 +52,23 @@
                 "CMAKE_ANDROID_ARCH_ABI": "armeabi-v7a",
                 "CMAKE_ANDROID_NDK": "$env{ANDROID_NDK}",
                 "CMAKE_SYSROOT": "$env{ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
-                "CMAKE_ANDROID_STL_TYPE": "c++_static"
+                "CMAKE_ANDROID_STL_TYPE": "c++_static",
+
+                // pupnp
+                "DOWNLOAD_AND_BUILD_DEPS": false,
+                "UPNP_ENABLE_IPV6": false,
+                "UPNP_BUILD_SAMPLES": false,
+                "UPNP_BUILD_TEST": false,
+
+                // rapidjson
+                "RAPIDJSON_BUILD_CXX11": false,
+                "RAPIDJSON_BUILD_CXX17": true,
+                "RAPIDJSON_BUILD_DOC": false,
+                "RAPIDJSON_BUILD_TESTS": false,
+                "RAPIDJSON_BUILD_EXAMPLES": false,
+
+                // slog
+                "ENABLE_SLOG": true
             },
             "condition": {
                 "type": "equals",
