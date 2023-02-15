@@ -171,7 +171,7 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
         }
         else if constexpr (std::is_same_v<T, int>)
             response = CreateResponse("1.0", "DLNABrowseResponse", request, nullptr, var);
-        else static_assert(false);
+        else static_assert(always_false<T>, "Unsupported type");
             }, Resolve(p_response));
     }
     else if (strcmp(request["version"].GetString(), "2.0") == 0)
