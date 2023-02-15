@@ -146,7 +146,7 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
     auto& cookie = *static_cast<Cookie*>(p_cookie);
 
 #if __clang__ // lambda can capture struct-binding since C++20, supported by MSVC and GCC but not Clang(<=15.0)
-    const std::string& req_json = std::get<0>(cookie);
+    rapidjson::Document& request = std::get<0>(cookie);
     BrowseDLNAFolderCallback OnBrowseResultCallback = std::get<BrowseDLNAFolderCallback>(cookie);
 #else
     auto& [request, OnBrowseResultCallback] = cookie;
