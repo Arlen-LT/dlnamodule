@@ -4,19 +4,12 @@
 #include <regex>
 #include <variant>
 
-#include "ixml.h"
 #include "upnptools.h"
-#include "config.h"
 
-#include "base64.h"
 #include "logger.h"
 #include "DLNAModule.h"
 #include "DLNAConfig.h"
 #include "URLHandler.h"
-
-#include "rapidjson/document.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/writer.h"
 
 #if __ANDROID__
 #include <sys/resource.h>
@@ -61,7 +54,7 @@ void DLNAModule::Initialize()
     Log(LogLevel::Info, "Upnp control point register success, handle is %d", handle);
     UpnpSetMaxContentLength(INT_MAX);
 
-    if (UpnpSearchAsync(handle, MAX_SEARCH_TIME, MEDIA_SERVER_DEVICE_TYPE, &GetInstance()) != UPNP_E_SUCCESS)
+    if (UpnpSearchAsync(handle, 80, MEDIA_SERVER_DEVICE_TYPE, &GetInstance()) != UPNP_E_SUCCESS)
     {
         Log(LogLevel::Error, "Searching server failed");
         return;
@@ -83,7 +76,7 @@ void DLNAModule::Search()
         std::scoped_lock<std::mutex> lock(UpnpDeviceMapMutex);
         UpnpDeviceMap.clear();
     }
-    UpnpSearchAsync(handle, MAX_SEARCH_TIME, "ssdp:all", &GetInstance());
+    UpnpSearchAsync(handle, 80, "ssdp:all", &GetInstance());
 }
 
 int DLNAModule::UpnpRegisterClientCallback(Upnp_EventType eventType, const void* event, void* cookie)

@@ -10,16 +10,12 @@
 
 #include "ixml.h"
 #include "upnptools.h"
-#include "config.h"
 
 #include "logger.h"
 #include "URLHandler.h"
 
-// Make a way to use static_assert(false) while this template is specialized.  Cf. https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2593r0.html
-template <typename...> inline constexpr bool always_false = false;
-
 template <typename T>
-const std::string CreateResponse(const std::string& version, const std::string& method, const std::string& request, const T& result, int status)
+const std::string CreateResponse(const std::string& version, const std::string& method, rapidjson::Value& request, const T& result, int status)
     requires std::is_same_v<T, std::vector<Item>> || std::is_same_v<T, std::string> || std::is_same_v<T, std::nullptr_t>
 {
     using namespace rapidjson;
@@ -27,7 +23,7 @@ const std::string CreateResponse(const std::string& version, const std::string& 
     auto& allocator = response.GetAllocator();
     response.AddMember("version", Value().SetString(version.data(), version.length(), allocator), allocator);
     response.AddMember("method", Value().SetString(method.data(), method.length(), allocator), allocator);
-    response.AddMember("request_body", Value().SetString(request.data(), request.length(), allocator), allocator);
+    response.AddMember("request_body", request.Move(), allocator);
 
     if constexpr (std::is_same_v<T, std::vector<Item>>)
     {
@@ -153,7 +149,7 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
     const std::string& req_json = std::get<0>(cookie);
     BrowseDLNAFolderCallback OnBrowseResultCallback = std::get<BrowseDLNAFolderCallback>(cookie);
 #else
-    auto& [req_json, OnBrowseResultCallback] = cookie;
+    auto& [request, OnBrowseResultCallback] = cookie;
 #endif
 
     IXML_Document* p_response = UpnpActionComplete_get_ActionResult((UpnpActionComplete*)p_event);
@@ -162,36 +158,40 @@ static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event,
         Log(LogLevel::Error, "No response from browse() action");
         return -1;
     }
+    Log(LogLevel::Debug, "%s", ixmlPrintDocument(p_response));
 
-    //std::string response1;
-    //std::visit([&](auto&& var) {
-    //    using T = std::decay_t<decltype(var)>;
-    //if constexpr (std::is_same_v<T, std::string>)
-    //{
-    //    response1 = CreateResponse("1.0", "DLNABrowseResponse", req_json, var, 0);
-    //}
-    //else if constexpr (std::is_same_v<T, int>)
-    //    response1 = CreateResponse("1.0", "DLNABrowseResponse", req_json, nullptr, var);
-    //else static_assert(false);
-    //    }, Resolve(p_response));
-
-    std::string response2;
-    std::visit([&](auto&& var) {
-        using T = std::decay_t<decltype(var)>;
-    if constexpr (std::is_same_v<T, std::vector<Item>>)
-        response2 = CreateResponse("2.0", "DLNABrowseResponse", req_json, var, 0);
-    else if constexpr (std::is_same_v<T, int>)
-        response2 = CreateResponse("2.0", "DLNABrowseResponse", req_json, nullptr, var);
-    else static_assert(always_false<T>, "Unsupported type");
-        }, Resolve2(p_response));
+    std::string response;
+    if (strcmp(request["version"].GetString(), "1.0") == 0)
+    {
+        std::visit([&](auto&& var) {
+            using T = std::decay_t<decltype(var)>;
+        if constexpr (std::is_same_v<T, std::string>)
+        {
+            response = CreateResponse("1.0", "DLNABrowseResponse", request, var, 0);
+        }
+        else if constexpr (std::is_same_v<T, int>)
+            response = CreateResponse("1.0", "DLNABrowseResponse", request, nullptr, var);
+        else static_assert(false);
+            }, Resolve(p_response));
+    }
+    else if (strcmp(request["version"].GetString(), "2.0") == 0)
+    {
+        std::visit([&](auto&& var) {
+            using T = std::decay_t<decltype(var)>;
+        if constexpr (std::is_same_v<T, std::vector<Item>>)
+            response = CreateResponse("2.0", "DLNABrowseResponse", request, var, 0);
+        else if constexpr (std::is_same_v<T, int>)
+            response = CreateResponse("2.0", "DLNABrowseResponse", request, nullptr, var);
+        else static_assert(always_false<T>, "Unsupported type");
+            }, Resolve2(p_response));
+    }
 
     ixmlDocument_free(p_response);
     delete (&cookie);
 
     if (OnBrowseResultCallback)
     {
-        //OnBrowseResultCallback(response1.data());
-        OnBrowseResultCallback(response2.data());
+        OnBrowseResultCallback(response.data());
     }
     return 0;
 }
@@ -545,5 +545,5 @@ bool BrowseFolderByUnity(const char* json, BrowseDLNAFolderCallback OnBrowseResu
     }(uuid);
 
     Log(LogLevel::Info, "BrowseRequest: ObjID=%s, name=%s, location=%s", objid, server->friendlyName.c_str(), server->location.c_str());
-    return BrowseAction(objid, "BrowseDirectChildren", "*", "0", "10000", "", server->location.data(), new Cookie(json, OnBrowseResultCallback)) == 0;
+    return BrowseAction(objid, "BrowseDirectChildren", "*", "0", "10000", "", server->location.data(), new Cookie(std::move(request), OnBrowseResultCallback)) == 0;
 }

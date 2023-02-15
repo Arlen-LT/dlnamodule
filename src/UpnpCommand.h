@@ -1,7 +1,11 @@
 #pragma once
 #include <string>
+#include <optional>
+#include <variant>
 
+#include "ixml.h"
 #include "upnp.h"
+#include "rapidjson/document.h"
 
 struct Item
 {
@@ -46,10 +50,14 @@ struct Item
 };
 
 using BrowseDLNAFolderCallback = std::add_pointer<void(const char*)>::type;
-using Cookie = std::tuple<std::string, BrowseDLNAFolderCallback>;
+using Cookie = std::tuple<rapidjson::Document, BrowseDLNAFolderCallback>;
 
 int BrowseAction(const char* objectID, const char* flag, const char* filter, const char* startingIndex, const char* requestCount, const char* sortCriteria, const char* controlUrl, Cookie* p_cookie);
+std::variant<std::vector<Item>, int> Resolve2(IXML_Document * p_response);
 static int UpnpSendActionCallBack(Upnp_EventType eventType, const void* p_event, void* p_cookie);
 bool BrowseFolderByUnity(const char* json, BrowseDLNAFolderCallback OnBrowseResultCallback);
 std::optional<Item> TryParseItem(IXML_Element* itemElement, bool AsDirectory);
 IXML_Document* parseBrowseResult(IXML_Document* p_doc);
+
+// Make a way to use static_assert(false) while this template is specialized.  Cf. https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2593r0.html
+template <typename...> inline constexpr bool always_false = false;
