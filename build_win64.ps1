@@ -7,14 +7,12 @@ echo "Visual Studio Version: $vs2022_version"
 echo "Visual Studio Install Path: $vs2022_install"
 
 $cmake="$cmake_install/bin/cmake.exe"
+$ctest="$cmake_install/bin/ctest.exe"
+
 & $cmake --version
-# $ninja="C:\tools\cmake-3.24.3-windows-x86_64\bin\ninja.exe"
-# & $ninja --version
-if((Test-Path -Path './contrib/rapidjson/thirdparty')){
-	#rm -r -force ./contrib/rapidjson/thirdparty
-}
 & $cmake --preset win64
 pushd win64/build
 & $cmake --build . --config Release
 & $cmake --install .
+& $ctest
 popd

@@ -13,11 +13,6 @@ else()
     git_describe_working_tree(GIT_TAG --match "v*")
 endif()
 message(STATUS "BUILDING DLNAModule-${GIT_REFSPEC}-${GIT_HASH} ${GIT_TAG}")
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/DLNAConfig.h.in"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/DLNAConfig.h"
-    @ONLY
-)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -25,41 +20,14 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(ENABLE_SLOG OFF CACHE BOOL "link libslog shared library")
 
 project(DLNAModule)
+include(CTest)
+if(BUILD_TESTING)
+    #add_subdirectory("test")
+endif()
 
-add_library(${PROJECT_NAME} SHARED)
+add_subdirectory("src")
 add_subdirectory("contrib/pupnp")
 add_subdirectory("contrib/rapidjson")
-
-target_sources(${PROJECT_NAME} 
-    PRIVATE
-    "src/base64.cpp"
-    "src/UpnpCommand.cpp"
-    "src/URLHandler.cpp"
-    "src/DLNAModule.cpp" 
-    "src/DLNAInterface.cpp"
-    "$<$<NOT:$<BOOL:${ENABLE_SLOG}>>:src/logger.cpp>"
-)
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-    "src"
-
-    "contrib/slog"
-    "contrib/rapidjson/include"
-)
-
-target_compile_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/MP /utf-8 /Zc:__cplusplus>)
-target_compile_definitions(${PROJECT_NAME} 
-    PUBLIC $<IF:$<CONFIG:Debug>,DEBUG,NDEBUG>
-    PUBLIC $<$<BOOL:${MSVC}>:_WINDLL _UNICODE UNICODE _CONSOLE>
-    PUBLIC $<$<BOOL:${ENABLE_SLOG}>:ENABLE_SLOG>
-)
-target_link_directories(${PROJECT_NAME} PRIVATE $<$<BOOL:${ENABLE_SLOG}>:${CMAKE_CURRENT_SOURCE_DIR}/contrib/slog>)
-target_link_libraries(${PROJECT_NAME} PRIVATE UPNP::Static IXML::Static $<$<BOOL:${ENABLE_SLOG}>:slog>)
-if(${CMAKE_SYSTEM_NAME} MATCHES "Android")
-    find_library(log-lib log)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${log-lib})
-endif()
-target_link_options(${PROJECT_NAME} PUBLIC $<$<BOOL:${MSVC}>:/DEF:"${CMAKE_CURRENT_SOURCE_DIR}/src/DLNAModule.def">)
 
 install (TARGETS DLNAModule
     EXPORT DLNAModule

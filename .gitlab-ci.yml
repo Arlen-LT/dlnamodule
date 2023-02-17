@@ -40,7 +40,7 @@ build_armv7:
     - chmod +x ./build_armv7.sh && ./build_armv7.sh
   artifacts:
     paths:
-    - ./armv7/install
+    - ./armv7
 
 build_win64:
   stage: build

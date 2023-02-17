@@ -100,7 +100,7 @@ namespace logger {
     template <typename... Args>
     Log(LogLevel, const char*, Args&&...) -> Log<Args...>;
 #else // ENABLE_SLOG
-#include "../contrib/slog/slog.h"
+#include "slog.h"
     enum LogLevel
     {
         Trace = L_TRACE,
