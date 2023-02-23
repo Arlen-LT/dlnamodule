@@ -19,7 +19,7 @@ std::string ReplaceAll(const char* src, int srcLen, const char* oldValue, const 
         pCur = strstr(pCur, oldValue);
     }
 
-    char* newChar = new char[srcLen + (lenSrcTarValue - lenSrcOldValue) * findCount];
+    char* newChar = new char[srcLen + (lenSrcTarValue - lenSrcOldValue) * findCount + 1]; 
     const char* pSrcCur = src;
     char* pTarCur = newChar;
     for (int iIndex = 0; iIndex < findCount; ++iIndex)
@@ -36,16 +36,17 @@ std::string ReplaceAll(const char* src, int srcLen, const char* oldValue, const 
     memcpy(pTarCur, pSrcCur, cpyLen);
     pTarCur += cpyLen;
 
-    std::string ret(newChar, srcLen + (lenSrcTarValue - lenSrcOldValue) * findCount);
+    newChar[srcLen + (lenSrcTarValue - lenSrcOldValue) * findCount] = '\0';
+    std::string ret(newChar);
     delete[] newChar;
+    delete[] posAllOldValue;
 
     return ret;
 }
 
 std::string ConvertHTMLtoXML(const char* src)
 {
-    int strLen = strlen(src);
-    std::string srcstr(src, strLen);
+    std::string srcstr(src);
 
     int lengthBefore = 0;
     do
