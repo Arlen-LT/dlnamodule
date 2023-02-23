@@ -29,6 +29,19 @@ Pre-Build-Environment_win64:
     - |
       & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -version [17.0,18.0] -all
 
+build_arm64:
+  stage: build
+  image: arlenlt/android-cross-compiler:latest
+  tags:
+    - docker
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  script:
+    - chmod +x ./build_arm64.sh && ./build_arm64.sh
+  artifacts:
+    paths:
+    - ./arm64
+
 build_armv7:
   stage: build
   image: arlenlt/android-cross-compiler:latest
