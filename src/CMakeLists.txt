@@ -17,7 +17,7 @@ target_sources(${PROJECT_NAME}
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-    #"src"
+    "src"
 
     "${CMAKE_SOURCE_DIR}/contrib/slog/include"
     "${CMAKE_SOURCE_DIR}/contrib/rapidjson/include"
