@@ -17,17 +17,18 @@ message(STATUS "BUILDING DLNAModule-${GIT_REFSPEC}-${GIT_HASH} ${GIT_TAG}")
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(ENABLE_SLOG OFF CACHE BOOL "link libslog shared library")
+
+option(ENABLE_SLOG "link libslog library" OFF)
+option(DLNA_BUILD_TESTS "DLNA unittest and perftest" OFF)
 
 project(DLNAModule)
-include(CTest)
-if(BUILD_TESTING)
-    #add_subdirectory("test")
-endif()
 
 add_subdirectory("src")
 add_subdirectory("contrib/pupnp")
 add_subdirectory("contrib/rapidjson")
+if(DLNA_BUILD_TESTS)
+    add_subdirectory("test")
+endif()
 
 install (TARGETS DLNAModule
     EXPORT DLNAModule

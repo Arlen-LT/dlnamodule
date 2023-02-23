@@ -256,7 +256,6 @@ int BrowseAction(const char* objectID,
         goto browseActionCleanup;
     }
 
-    CHECK_VARIABLE(p_cookie, "%p");
     res = UpnpSendActionAsync(DLNAModule::GetInstance().handle,
         controlUrl,
         CONTENT_DIRECTORY_SERVICE_TYPE,
