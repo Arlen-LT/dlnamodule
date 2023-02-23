@@ -1,6 +1,6 @@
 configure_file(
-    "DLNAConfig.h.in"
-    "DLNAConfig.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/DLNAConfig.h.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/DLNAConfig.h"
     @ONLY
 )
 
