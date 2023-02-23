@@ -26,6 +26,7 @@
                 "UPNP_ENABLE_IPV6": false,
                 "UPNP_BUILD_SAMPLES": false,
                 "UPNP_BUILD_TEST": false,
+                "UPNP_BUILD_SHARED": false,
 
                 // rapidjson
                 "RAPIDJSON_BUILD_CXX11": false,
@@ -59,6 +60,44 @@
                 "UPNP_ENABLE_IPV6": false,
                 "UPNP_BUILD_SAMPLES": false,
                 "UPNP_BUILD_TEST": false,
+                "UPNP_BUILD_SHARED": false,
+
+                // rapidjson
+                "RAPIDJSON_BUILD_CXX11": false,
+                "RAPIDJSON_BUILD_CXX17": true,
+                "RAPIDJSON_BUILD_DOC": false,
+                "RAPIDJSON_BUILD_TESTS": false,
+                "RAPIDJSON_BUILD_EXAMPLES": false,
+
+                // slog
+                "ENABLE_SLOG": true
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "arm64",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/${presetName}/build",
+            "installDir": "${sourceDir}/${presetName}/install",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_SYSTEM_NAME": "Android",
+                "CMAKE_SYSTEM_VERSION": "27",
+                "CMAKE_ANDROID_ARCH_ABI": "arm64-v8a",
+                "CMAKE_ANDROID_NDK": "$env{ANDROID_NDK}",
+                "CMAKE_SYSROOT": "$env{ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+                "CMAKE_ANDROID_STL_TYPE": "c++_static",
+
+                // pupnp
+                "DOWNLOAD_AND_BUILD_DEPS": false,
+                "UPNP_ENABLE_IPV6": false,
+                "UPNP_BUILD_SAMPLES": false,
+                "UPNP_BUILD_TEST": false,
+                "UPNP_BUILD_SHARED": false,
 
                 // rapidjson
                 "RAPIDJSON_BUILD_CXX11": false,
