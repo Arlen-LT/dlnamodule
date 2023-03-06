@@ -40,7 +40,7 @@ Pre-Build-Environment_win64:
     - chmod +x ./build.sh && ./build.sh --arch=${ARCHITECHTURE}
   artifacts:
     paths:
-      - ./arm64
+      - ./${ARCHITECHTURE}
 
 build_arm64:
   <<: *build_arm
